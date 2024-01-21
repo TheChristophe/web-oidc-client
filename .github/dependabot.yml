@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    registries:
+      - npm-github
+      - npm-fontawesome
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: saturday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'build(deps)'
+      prefix-development: 'build(deps-dev)'
+    versioning-strategy: increase
+    groups:
+      dependencies:
+        patterns:
+          - '*'

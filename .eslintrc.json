@@ -1,0 +1,78 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/strict",
+    "plugin:eslint-comments/recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "tsconfig.json",
+    "ecmaFeatures": {
+      "jsx": true,
+      "modules": true
+    },
+    "sourceType": "module"
+  },
+  "plugins": ["@typescript-eslint", "jsx-a11y", "github", "import"],
+  "rules": {
+    "@typescript-eslint/ban-ts-comment": "warn",
+    "curly": "error",
+    "no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error"]
+      }
+    ],
+    "quotes": [
+      "warn",
+      "single",
+      {
+        "avoidEscape": true
+      }
+    ],
+    "prefer-template": "warn",
+    "eqeqeq": ["warn", "smart"],
+    "no-lonely-if": "warn",
+    "no-multi-assign": "warn",
+    "@typescript-eslint/no-shadow": "warn",
+    "no-useless-return": "warn",
+    "no-useless-rename": "warn",
+    "one-var-declaration-per-line": "warn",
+    "prefer-object-spread": "warn",
+    "no-unreachable-loop": "warn",
+    "no-template-curly-in-string": "warn",
+    "default-case-last": "warn",
+    "no-array-constructor": "warn",
+    "no-else-return": "warn",
+    "array-callback-return": "warn",
+    "@typescript-eslint/consistent-type-definitions": ["warn", "type"],
+
+    // based on https://github.com/github/eslint-plugin-github/blob/main/lib/configs/react.js
+    "github/a11y-no-generic-link-text": "error",
+
+    "import/first": "error",
+    "import/no-absolute-path": "error",
+    // disabled: slow linting
+    /*"import/no-cycle": "error",*/
+    "import/no-duplicates": "error",
+
+    "@typescript-eslint/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "fixStyle": "inline-type-imports"
+      }
+    ],
+
+    "import/consistent-type-specifier-style": ["error", "prefer-inline"],
+    "import/prefer-default-export": ["warn"]
+  },
+  "ignorePatterns": [".eslintrc.js"]
+}
