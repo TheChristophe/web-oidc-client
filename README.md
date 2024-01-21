@@ -35,4 +35,5 @@ To log in, call `authClient.login()`, to logout, call `authClient.logout()`.
 Changes in status will be communicated to the outside world through the event handler passed as second argument.
 
 ## States
-![image](https://github.com/TheChristophe/web-oidc-client/assets/65168240/8213a5fe-4d0a-45f6-932b-edc4fe3722e7)
+![image](https://github.com/TheChristophe/web-oidc-client/assets/65168240/d09a1984-6f40-492a-b410-70ba4d7f1bd7)
+
