@@ -27,6 +27,8 @@ type BaseConfig = {
   redirectionUrl?: string;
   scopes: string;
   autoLogin?: boolean;
+
+  debug?: boolean;
 };
 type Configuration = Required<BaseConfig> & ConfigEndpoints;
 export type InitialConfiguration = BaseConfig & ConfigEndpoints;

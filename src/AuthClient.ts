@@ -35,6 +35,8 @@ class AuthClient {
    * This is required to not break in SSR (e.g. Next.js)
    */
   public browserInit() {
+    this.initConfiguration.debug && console.debug('AuthClient', 'Browser Init');
+
     if (this.state != null) {
       return;
     }
@@ -57,6 +59,8 @@ class AuthClient {
       return;
     }
 
+    this.initConfiguration.debug && console.debug('AuthClient', 'Login');
+
     if (this.status.status !== 'loading') {
       this.advanceState(
         new StartOauthState(this.state?.getState() ?? this.getInitialState(), this.endpoints),
@@ -73,6 +77,8 @@ class AuthClient {
     if (this.pendingAction === 'logout') {
       return;
     }
+
+    this.initConfiguration.debug && console.debug('AuthClient', 'Logout');
 
     if (this.status.status !== 'loading') {
       this.advanceState(new LoggingOutState(this.state?.getState() ?? this.getInitialState()));
@@ -92,6 +98,7 @@ class AuthClient {
       autoLogin: this.initConfiguration.autoLogin === true,
       redirectionUrl:
         this.initConfiguration.redirectionUrl ?? `${window.location.origin}/oauth-redirect`,
+      debug: this.initConfiguration.debug ?? false,
     };
   }
 
@@ -118,12 +125,16 @@ class AuthClient {
    * @private
    */
   private advanceState(newState: AuthInternalState) {
-    console.debug('Moving to state', newState.constructor.name);
+    this.initConfiguration.debug &&
+      console.debug('AuthClient', 'Moving to state', newState.constructor.name);
+
     this.state = newState;
     this.endpoints = newState.getState().endpoints ?? this.endpoints;
 
     const newStatus = newState.getStatus();
     if (this.status.status !== newStatus.status) {
+      this.initConfiguration.debug &&
+        console.debug('AuthClient', 'Status changed', newStatus.status);
       this.eventHandler(newStatus);
     }
 
@@ -136,11 +147,13 @@ class AuthClient {
     }
     // pending login
     if (this.pendingAction === 'login') {
+      this.initConfiguration.debug && console.debug('AuthClient', 'Executing pending login');
       this.pendingAction = undefined;
       return this.login();
     }
     // pending logout
     if (this.pendingAction === 'logout') {
+      this.initConfiguration.debug && console.debug('AuthClient', 'Executing pending logout');
       this.pendingAction = undefined;
       return this.logout();
     }
@@ -148,10 +161,11 @@ class AuthClient {
     // schedule renewal if logged in
     // TODO: do this cleaner or elsewhere
     if (/*this.status.status === 'logged-in'*/ this.state instanceof LoggedInState) {
+      this.initConfiguration.debug && console.debug('AuthClient', 'Queueing renewal');
       this.scheduleTokenRenewal(this.state);
     }
 
-    console.debug('Processing state', newState.constructor.name);
+    this.initConfiguration.debug && console.debug('Processing state', newState.constructor.name);
     newState.process();
   }
 
