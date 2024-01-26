@@ -17,8 +17,6 @@ class ErrorState extends AuthInternalState {
   public override getStatus(): Status {
     return {
       status: AuthStatus.Error,
-      user: undefined,
-      auth: undefined,
       error: this.errorMessage,
     };
   }

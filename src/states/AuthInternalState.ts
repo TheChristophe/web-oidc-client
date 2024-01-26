@@ -1,5 +1,5 @@
 import type Configuration from '../Configuration';
-import type { Endpoints } from '../Configuration';
+import { type Endpoints } from '../Configuration';
 import type Status from '../Status';
 import { LOADING } from '../Status';
 import type AuthCache from '../AuthCache';

@@ -21,7 +21,6 @@ class LoggedInState extends AuthInternalState {
       auth: {
         token: this.state.authCache.tokenResponse.access_token,
       },
-      error: undefined,
     };
   }
 }

@@ -23,7 +23,6 @@
     "emitDeclarationOnly": true,
     "sourceMap": true,
     "jsx": "react",
-    "baseUrl": "src/",
   },
   "exclude": ["dist", "node_modules", "src/**/*.test.tsx", "src/**/*.stories.tsx", "examples/*"],
 }

@@ -6,7 +6,7 @@ import type AuthCache from '../AuthCache';
 import type Claims from '../Claims';
 import ErrorState from './ErrorState';
 
-export class IncomingRedirectState extends AuthInternalState {
+class IncomingRedirectState extends AuthInternalState {
   override state: AuthState<'endpoints'>;
   params: URLSearchParams;
 
@@ -144,3 +144,5 @@ export class IncomingRedirectState extends AuthInternalState {
     return true;
   }
 }
+
+export default IncomingRedirectState;

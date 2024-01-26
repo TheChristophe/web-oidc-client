@@ -10,9 +10,6 @@ class NotLoggedInState extends AuthInternalState {
   public override getStatus(): Status {
     return {
       status: AuthStatus.NotLoggedIn,
-      user: undefined,
-      auth: undefined,
-      error: undefined,
     };
   }
 }

@@ -1,6 +1,6 @@
 import AuthInternalState, { type AuthState } from './AuthInternalState';
 import { type Endpoints } from '../Configuration';
-import { IncomingRedirectState } from './IncomingRedirectState';
+import IncomingRedirectState from './IncomingRedirectState';
 import CheckLoginState from './CheckLoginState';
 
 class RedirectCheckState extends AuthInternalState {
