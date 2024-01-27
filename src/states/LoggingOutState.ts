@@ -1,5 +1,6 @@
 import AuthInternalState from './AuthInternalState';
 import NotLoggedInState from './NotLoggedInState';
+import { logWarn } from '../console';
 
 class LoggingOutState extends AuthInternalState {
   override async process() {
@@ -7,7 +8,7 @@ class LoggingOutState extends AuthInternalState {
       await this.revokeToken();
     } catch (error) {
       // log the error but ultimately ignore it
-      console.warn('Failed to revoke token', error);
+      logWarn('Failed to revoke token', error);
     }
 
     this.advance(NotLoggedInState);

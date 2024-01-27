@@ -6,6 +6,7 @@ import { type TokenResponse } from '../oauthTypes';
 import type Claims from '../Claims';
 import RenewLoginState from './RenewLoginState';
 import { type Endpoints } from '../Configuration';
+import { logWarn } from '../console';
 
 class CheckLoginState extends AuthInternalState {
   override state: AuthState<'endpoints'>;
@@ -42,7 +43,7 @@ class CheckLoginState extends AuthInternalState {
       this.validateCache(json);
       return json;
     } catch (e: unknown) {
-      console.warn('Stored endpoints look invalid, resetting', e);
+      logWarn('Stored endpoints look invalid, resetting', e);
       localStorage.removeItem(this.state.storageKey);
       return null;
     }

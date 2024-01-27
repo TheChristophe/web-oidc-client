@@ -6,6 +6,7 @@ import type AuthCache from '../AuthCache';
 import type Claims from '../Claims';
 import ErrorState from './ErrorState';
 import isJsonResponse from '../isJsonResponse';
+import { logDebug } from '../console';
 
 class IncomingRedirectState extends AuthInternalState {
   override state: AuthState<'endpoints'>;
@@ -156,6 +157,8 @@ class IncomingRedirectState extends AuthInternalState {
   private popValidState(state: string): boolean {
     const storedState = sessionStorage.getItem(`${this.state.storageKey}.state`);
     if (state !== storedState) {
+      this.state.configuration.debug &&
+        logDebug('Received state', state, 'did not match stored state', storedState);
       return false;
     }
     sessionStorage.removeItem(`${this.state.storageKey}.state`);

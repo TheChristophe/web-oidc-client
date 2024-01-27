@@ -10,6 +10,7 @@ import RenewLoginState from './states/RenewLoginState';
 import LoggedInState from './states/LoggedInState';
 import LoggingOutState from './states/LoggingOutState';
 import ErrorState from './states/ErrorState';
+import { logError, logDebug } from './console';
 
 export type AuthEventHandler = (event: Status) => void;
 type Pending = 'login' | 'logout';
@@ -36,7 +37,7 @@ class AuthClient {
    * This is required to not break in SSR (e.g. Next.js)
    */
   public browserInit() {
-    this.initConfiguration.debug && console.debug('AuthClient', 'Browser Init');
+    this.initConfiguration.debug && logDebug('Browser Init');
 
     if (this.state != null) {
       return;
@@ -60,7 +61,7 @@ class AuthClient {
       return;
     }
 
-    this.initConfiguration.debug && console.debug('AuthClient', 'Login');
+    this.initConfiguration.debug && logDebug('Login');
 
     if (this.status.status !== 'loading') {
       this.advanceState(
@@ -79,7 +80,7 @@ class AuthClient {
       return;
     }
 
-    this.initConfiguration.debug && console.debug('AuthClient', 'Logout');
+    this.initConfiguration.debug && logDebug('Logout');
 
     if (this.status.status !== 'loading') {
       this.advanceState(new LoggingOutState(this.state?.getState() ?? this.getInitialState()));
@@ -126,11 +127,10 @@ class AuthClient {
    * @private
    */
   private advanceState(newState: AuthInternalState) {
-    this.initConfiguration.debug &&
-      console.debug('AuthClient', 'Moving to state', newState.constructor.name);
+    this.initConfiguration.debug && logDebug('Moving to state', newState.constructor.name);
 
     if (newState instanceof ErrorState) {
-      console.error('Error state:', newState.errorMessage);
+      logError('Error state:', newState.errorMessage);
     }
 
     this.state = newState;
@@ -138,8 +138,7 @@ class AuthClient {
 
     const newStatus = newState.getStatus();
     if (this.status.status !== newStatus.status) {
-      this.initConfiguration.debug &&
-        console.debug('AuthClient', 'Status changed', newStatus.status);
+      this.initConfiguration.debug && logDebug('Status changed', newStatus.status);
       this.eventHandler(newStatus);
     }
 
@@ -152,13 +151,13 @@ class AuthClient {
     }
     // pending login
     if (this.pendingAction === 'login') {
-      this.initConfiguration.debug && console.debug('AuthClient', 'Executing pending login');
+      this.initConfiguration.debug && logDebug('Executing pending login');
       this.pendingAction = undefined;
       return this.login();
     }
     // pending logout
     if (this.pendingAction === 'logout') {
-      this.initConfiguration.debug && console.debug('AuthClient', 'Executing pending logout');
+      this.initConfiguration.debug && logDebug('Executing pending logout');
       this.pendingAction = undefined;
       return this.logout();
     }
@@ -166,11 +165,11 @@ class AuthClient {
     // schedule renewal if logged in
     // TODO: do this cleaner or elsewhere
     if (/*this.status.status === 'logged-in'*/ this.state instanceof LoggedInState) {
-      this.initConfiguration.debug && console.debug('AuthClient', 'Queueing renewal');
+      this.initConfiguration.debug && logDebug('Queueing renewal');
       this.scheduleTokenRenewal(this.state);
     }
 
-    this.initConfiguration.debug && console.debug('Processing state', newState.constructor.name);
+    this.initConfiguration.debug && logDebug('Processing state', newState.constructor.name);
     newState.process();
   }
 
