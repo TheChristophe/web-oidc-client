@@ -31,7 +31,7 @@ class IncomingRedirectState extends AuthInternalState {
       this.advance(ErrorState, 'Missing code or state in oauth redirect');
       return;
     }
-    if (this.getValidState() !== state) {
+    if (!this.popValidState(state)) {
       this.advance(ErrorState, 'Invalid state in oauth redirect');
       return;
     }
@@ -40,8 +40,6 @@ class IncomingRedirectState extends AuthInternalState {
       this.advance(ErrorState, 'Missing challenge code');
       return;
     }
-
-    this.popValidState(state);
 
     // TODO nextjs router ?
     const params = new URLSearchParams(window.location.search);
@@ -151,19 +149,12 @@ class IncomingRedirectState extends AuthInternalState {
   }
 
   /**
-   * Fetch the last generated authentication state
-   */
-  private getValidState(): string | null {
-    return localStorage.getItem(`${this.state.storageKey}.state`);
-  }
-
-  /**
    * Remove a state from valid states
    *
    * @param state authentication state to remove
    */
   private popValidState(state: string): boolean {
-    const storedState = this.getValidState();
+    const storedState = sessionStorage.getItem(`${this.state.storageKey}.state`);
     if (state !== storedState) {
       return false;
     }
