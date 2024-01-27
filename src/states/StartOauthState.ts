@@ -52,7 +52,7 @@ class StartOauthState extends AuthInternalState {
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
-    })}`;
+    }).toString()}`;
   }
 
   /**
@@ -60,7 +60,7 @@ class StartOauthState extends AuthInternalState {
    */
   private newValidState(): string {
     const state = Math.random().toString(36).substring(2, 15);
-    localStorage.setItem(`${this.state.storageKey}.state`, state);
+    sessionStorage.setItem(`${this.state.storageKey}.state`, state);
     return state;
   }
 }

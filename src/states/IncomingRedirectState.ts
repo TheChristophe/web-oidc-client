@@ -164,11 +164,10 @@ class IncomingRedirectState extends AuthInternalState {
    */
   private popValidState(state: string): boolean {
     const storedState = this.getValidState();
-    // TODO: remove state parameter? this implementation is not filtering an array of valid states anymore
     if (state !== storedState) {
       return false;
     }
-    localStorage.removeItem(`${this.state.storageKey}.state`);
+    sessionStorage.removeItem(`${this.state.storageKey}.state`);
     return true;
   }
 }
