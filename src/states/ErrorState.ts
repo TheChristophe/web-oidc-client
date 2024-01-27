@@ -5,9 +5,9 @@ import { AuthStatus } from '../Status';
 class ErrorState extends AuthInternalState {
   private readonly _errorMessage: string;
 
-  constructor(state: AuthState, error: string) {
+  constructor(state: AuthState, error: string, e?: unknown) {
     super(state);
-    this._errorMessage = error;
+    this._errorMessage = `${error}${e != null ? `: ${e instanceof Error ? e.message : e.toString()}` : ''}`;
   }
 
   override async process() {

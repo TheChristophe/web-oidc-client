@@ -5,6 +5,7 @@ import { type TokenResponse, type WorkingTokenResponse } from '../oauthTypes';
 import type AuthCache from '../AuthCache';
 import type Claims from '../Claims';
 import ErrorState from './ErrorState';
+import isJsonResponse from '../isJsonResponse';
 
 class IncomingRedirectState extends AuthInternalState {
   override state: AuthState<'endpoints'>;
@@ -51,37 +52,64 @@ class IncomingRedirectState extends AuthInternalState {
     localStorage.removeItem(this.state.storageKey);
 
     let token: WorkingTokenResponse;
+    let tokenResponse: Response;
     try {
-      const tokenResponse = await this.requestToken(code, challenge);
+      tokenResponse = await this.requestToken(code, challenge);
+    } catch (error: unknown) {
+      this.advance(ErrorState, 'Error while fetching token', error);
+      return;
+    }
 
+    if (!tokenResponse.ok) {
+      if (isJsonResponse(tokenResponse)) {
+        this.advance(ErrorState, 'Bad token response', await tokenResponse.json());
+      } else {
+        this.advance(ErrorState, 'Bad token response', tokenResponse.status);
+      }
+      return;
+    }
+
+    try {
       // TODO: validate fields from tokenResponse
       const maybeToken: TokenResponse = await tokenResponse.json();
 
       if (maybeToken.expires_in === undefined) {
-        this.advance(ErrorState, 'This OAuth2.0 implementation requires expires_in to be set');
-        console.error('Received oauth token response without expires_in');
+        this.advance(ErrorState, 'This OIDC implementation requires expires_in to be set');
         return;
       }
 
       // TODO: how to make typescript happy with this because the condition above should already cover this
       token = maybeToken as WorkingTokenResponse;
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching token');
-      console.error(error);
+      this.advance(ErrorState, 'Error while parsing token response', error);
       return;
     }
 
     sessionStorage.removeItem(`${this.state.storageKey}.code_verifier`);
 
     let user: Claims;
+    let userResponse: Response;
     try {
-      const userResponse = await this.requestUserinfo(token);
+      userResponse = await this.requestUserinfo(token);
+    } catch (error: unknown) {
+      this.advance(ErrorState, 'Error while fetching user info', error);
+      return;
+    }
 
+    if (!userResponse.ok) {
+      if (isJsonResponse(userResponse)) {
+        this.advance(ErrorState, 'Bad userinfo response', await userResponse.json());
+      } else {
+        this.advance(ErrorState, 'Bad userinfo response', userResponse.status);
+      }
+      return;
+    }
+
+    try {
       // TODO: validate fields from userResponse
       user = await userResponse.json();
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching user info');
-      console.error(error);
+      this.advance(ErrorState, 'Error while parsing user info', error);
       return;
     }
     const cache = this.packTokenAndUser(token, user);

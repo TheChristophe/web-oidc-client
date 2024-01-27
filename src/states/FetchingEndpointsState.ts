@@ -2,33 +2,39 @@ import { type Endpoints, type OidcWellknownEndpoints } from '../Configuration';
 import AuthInternalState from './AuthInternalState';
 import RedirectCheckState from './RedirectCheckState';
 import ErrorState from './ErrorState';
+import isJsonResponse from '../isJsonResponse';
 
 class FetchingEndpointsState extends AuthInternalState {
   override async process() {
-    const response = await fetch(
-      `${this.state.configuration.authority}/.well-known/openid-configuration`,
-    );
+    let response: Response;
+    try {
+      response = await fetch(
+        `${this.state.configuration.authority}/.well-known/openid-configuration`,
+      );
+    } catch (error: unknown) {
+      this.advance(ErrorState, 'Could not fetch OIDC well-known', error);
+      return;
+    }
     if (!response.ok) {
-      this.advance(ErrorState, 'Could not fetch OIDC well-known');
+      if (isJsonResponse(response)) {
+        this.advance(ErrorState, 'OIDC well-known response was not ok', await response.json());
+      } else {
+        this.advance(ErrorState, 'OIDC well-known response was not ok', response.status);
+      }
       return;
     }
     let data: Record<string, unknown>;
     try {
       data = await response.json();
-    } catch (error) {
-      this.advance(ErrorState, 'Could not parse OIDC well-known');
-      console.error(error);
+    } catch (error: unknown) {
+      this.advance(ErrorState, 'Could not parse OIDC well-known', error);
       return;
     }
 
     try {
       this.validateOidcWellknown(data);
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        this.advance(ErrorState, e.message);
-        return;
-      }
-      this.advance(ErrorState, 'Could not validate required fields from OIDC well-known');
+      this.advance(ErrorState, 'Could not validate required fields from OIDC well-known', e);
       return;
     }
 

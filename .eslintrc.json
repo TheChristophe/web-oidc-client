@@ -27,7 +27,7 @@
     "no-console": [
       "warn",
       {
-        "allow": ["warn", "error"]
+        "allow": ["debug", "warn", "error"]
       }
     ],
     "quotes": [

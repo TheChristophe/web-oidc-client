@@ -6,6 +6,7 @@ import type Claims from '../Claims';
 import LoggedInState from './LoggedInState';
 import { type Endpoints } from '../Configuration';
 import StartOauthState from './StartOauthState';
+import isJsonResponse from '../isJsonResponse';
 class RenewLoginState extends AuthInternalState {
   override state: AuthState<'authCache' | 'endpoints'>;
 
@@ -26,37 +27,62 @@ class RenewLoginState extends AuthInternalState {
     }
 
     let token: WorkingTokenResponse;
+    let tokenResponse: Response;
     try {
-      const tokenResponse = await this.requestToken(
-        this.state.authCache.tokenResponse.refresh_token,
-      );
+      tokenResponse = await this.requestToken(this.state.authCache.tokenResponse.refresh_token);
+    } catch (error: unknown) {
+      this.advance(ErrorState, 'Error while fetching token', error);
+      return;
+    }
 
+    if (!tokenResponse.ok) {
+      if (isJsonResponse(tokenResponse)) {
+        this.advance(ErrorState, 'Token response was not ok', await tokenResponse.json());
+      } else {
+        this.advance(ErrorState, 'Token response was not ok', tokenResponse.status);
+      }
+      return;
+    }
+
+    try {
       // TODO: validate fields from tokenResponse
       const maybeToken: TokenResponse = await tokenResponse.json();
 
       if (maybeToken.expires_in === undefined) {
         this.advance(ErrorState, 'This OAuth2.0 implementation requires expires_in to be set');
-        console.error('Received oauth token response without expires_in');
         return;
       }
 
       // TODO: how to make typescript happy with this because the condition above should already cover this
       token = maybeToken as WorkingTokenResponse;
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching token');
-      console.error(error);
+      this.advance(ErrorState, 'Failed to validate token response', error);
       return;
     }
 
     let user: Claims;
+    let userResponse: Response;
     try {
-      const userResponse = await this.requestUserinfo(token);
+      userResponse = await this.requestUserinfo(token);
+    } catch (error: unknown) {
+      this.advance(ErrorState, 'Error while fetching userinfo', error);
+      return;
+    }
 
+    if (!userResponse.ok) {
+      if (isJsonResponse(userResponse)) {
+        this.advance(ErrorState, 'Userinfo response was not ok', await userResponse.json());
+      } else {
+        this.advance(ErrorState, 'Userinfo response was not ok', userResponse.status);
+      }
+      return;
+    }
+
+    try {
       // TODO: validate fields from userResponse
       user = await userResponse.json();
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching user info');
-      console.error(error);
+      this.advance(ErrorState, 'Error while parsing userinfo response', error);
       return;
     }
     const cache = this.packTokenAndUser(token, user);

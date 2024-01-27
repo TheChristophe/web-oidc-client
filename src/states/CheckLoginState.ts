@@ -42,8 +42,7 @@ class CheckLoginState extends AuthInternalState {
       this.validateCache(json);
       return json;
     } catch (e: unknown) {
-      console.warn('Stored endpoints look invalid, resetting');
-      console.error(e);
+      console.warn('Stored endpoints look invalid, resetting', e);
       localStorage.removeItem(this.state.storageKey);
       return null;
     }

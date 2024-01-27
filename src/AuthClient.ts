@@ -1,5 +1,5 @@
-import { type AuthState } from './states/AuthInternalState';
 import type AuthInternalState from './states/AuthInternalState';
+import { type AuthState } from './states/AuthInternalState';
 import BrowserInitialState from './states/BrowserInitialState';
 import type Configuration from './Configuration';
 import { type Endpoints, type InitialConfiguration } from './Configuration';
@@ -9,6 +9,7 @@ import StartOauthState from './states/StartOauthState';
 import RenewLoginState from './states/RenewLoginState';
 import LoggedInState from './states/LoggedInState';
 import LoggingOutState from './states/LoggingOutState';
+import ErrorState from './states/ErrorState';
 
 export type AuthEventHandler = (event: Status) => void;
 type Pending = 'login' | 'logout';
@@ -127,6 +128,10 @@ class AuthClient {
   private advanceState(newState: AuthInternalState) {
     this.initConfiguration.debug &&
       console.debug('AuthClient', 'Moving to state', newState.constructor.name);
+
+    if (newState instanceof ErrorState) {
+      console.error('Error state:', newState.errorMessage);
+    }
 
     this.state = newState;
     this.endpoints = newState.getState().endpoints ?? this.endpoints;

@@ -1,5 +1,5 @@
 import AuthInternalState from './AuthInternalState';
-import type { Endpoints } from '../Configuration';
+import { type Endpoints } from '../Configuration';
 import RedirectCheckState from './RedirectCheckState';
 import FetchingEndpointsState from './FetchingEndpointsState';
 
@@ -26,8 +26,7 @@ class BrowserInitialState extends AuthInternalState {
       this.hasAllFields(json);
       return json;
     } catch (e: unknown) {
-      console.warn('Stored endpoints look invalid, resetting');
-      console.error(e);
+      console.warn('Stored endpoints look invalid, resetting', e);
       localStorage.removeItem(key);
       return null;
     }
