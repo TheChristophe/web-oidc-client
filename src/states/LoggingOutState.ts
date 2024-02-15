@@ -23,7 +23,7 @@ class LoggingOutState extends AuthInternalState {
       return;
     }
 
-    return fetch(this.state.endpoints.revocation, {
+    return fetch(this.state.endpoints.revocation_endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

@@ -118,7 +118,7 @@ class IncomingRedirectState extends AuthInternalState {
   }
 
   private async requestToken(code: string, challenge: string): Promise<Response> {
-    return fetch(this.state.endpoints.token, {
+    return fetch(this.state.endpoints.token_endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -134,7 +134,7 @@ class IncomingRedirectState extends AuthInternalState {
   }
 
   private async requestUserinfo(token: WorkingTokenResponse): Promise<Response> {
-    return fetch(this.state.endpoints.userinfo, {
+    return fetch(this.state.endpoints.userinfo_endpoint, {
       headers: { Authorization: `${token.token_type} ${token.access_token}` },
     });
   }

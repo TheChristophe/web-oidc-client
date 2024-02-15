@@ -44,7 +44,7 @@ class StartOauthState extends AuthInternalState {
     sessionStorage.setItem(`${this.state.storageKey}.code_verifier`, challenge);
 
     const codeChallenge = await generateCodeChallenge(challenge);
-    window.location.href = `${this.state.endpoints.authorization}?${new URLSearchParams({
+    window.location.href = `${this.state.endpoints.authorization_endpoint}?${new URLSearchParams({
       client_id: this.state.configuration.clientId,
       redirect_uri: this.state.configuration.redirectionUrl,
       response_type: 'code',

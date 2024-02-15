@@ -1,15 +1,8 @@
-export type OidcWellknownEndpoints = {
+export type Endpoints = {
   authorization_endpoint: string;
   token_endpoint: string;
   userinfo_endpoint: string;
   revocation_endpoint: string;
-};
-
-export type Endpoints = {
-  authorization: string;
-  token: string;
-  revocation: string;
-  userinfo: string;
 };
 
 export type ConfigEndpoints =
