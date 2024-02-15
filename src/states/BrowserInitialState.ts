@@ -16,7 +16,7 @@ class BrowserInitialState extends AuthInternalState {
   }
 
   private tryGetStoredEndpoints(): Endpoints | null {
-    const key = `${this.state.storageKey}.endpoints`;
+    const key = `${this.state.storageKey}.${this.state.configuration.authority}.endpoints`;
     const stored = localStorage.getItem(key);
     if (stored === null) {
       return null;

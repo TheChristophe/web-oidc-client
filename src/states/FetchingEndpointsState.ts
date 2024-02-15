@@ -39,7 +39,7 @@ class FetchingEndpointsState extends AuthInternalState {
     }
 
     localStorage.setItem(
-      `${this.state.storageKey}.endpoints`,
+      `${this.state.storageKey}.${this.state.configuration.authority}.endpoints`,
       JSON.stringify({
         authorization: data['authorization_endpoint'],
         token: data['token_endpoint'],
