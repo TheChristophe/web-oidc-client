@@ -14,7 +14,7 @@ class FetchError extends Error {
   }
 }
 
-class BrowserInitialState extends AuthInternalState {
+class LoadEndpointsState extends AuthInternalState {
   private readonly endpointsKey = `${this.state.storageKey}.${this.state.configuration.authority}.endpoints`;
 
   override async process() {
@@ -106,4 +106,4 @@ class BrowserInitialState extends AuthInternalState {
   }
 }
 
-export default BrowserInitialState;
+export default LoadEndpointsState;

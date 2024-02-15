@@ -1,6 +1,6 @@
 import type AuthInternalState from './states/AuthInternalState';
 import { type AuthState } from './states/AuthInternalState';
-import BrowserInitialState from './states/BrowserInitialState';
+import LoadEndpointsState from './states/LoadEndpointsState';
 import type Configuration from './Configuration';
 import { type Endpoints, type InitialConfiguration } from './Configuration';
 import type Status from './Status';
@@ -42,13 +42,13 @@ class AuthClient {
     if (this.state != null) {
       return;
     }
-    this.advanceState(new BrowserInitialState(this.getInitialState()));
+    this.advanceState(new LoadEndpointsState(this.getInitialState()));
 
     window.addEventListener('storage', (event) => {
       if (event.key === this.getInitialState().storageKey) {
         // other tab updated auth, reload
         // TODO: risk: both tabs attempting to renew, with the slower tab causing it to end up in error state
-        this.advanceState(new BrowserInitialState(this.getInitialState()));
+        this.advanceState(new LoadEndpointsState(this.getInitialState()));
       }
     });
   }
