@@ -43,10 +43,11 @@ class IncomingRedirectState extends AuthInternalState {
     }
 
     // TODO nextjs router ?
-    const params = new URLSearchParams(window.location.search);
-    params.delete('code');
-    params.delete('state');
-    window.history.replaceState(null, '', `${window.location.origin}?${this.params}`);
+    //const params = new URLSearchParams(window.location.search);
+    //params.delete('code');
+    //params.delete('state');
+    // TODO: delete not working properly
+    window.history.replaceState(null, '', `${window.location.origin}${window.location.pathname}`); // ?${this.params}`);
 
     localStorage.removeItem(this.state.storageKey);
 
