@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.11](https://github.com/thechristophe/web-oidc-client/compare/v0.0.10...v0.0.11) (2024-03-10)
+
+
+### Bug Fixes
+
+* **IncomingRedirectState:** fix removing code from history ([381c227](https://github.com/thechristophe/web-oidc-client/commit/381c227422f8f670b2bc09db9d95a7bebebc7dbb))
+
 ## [0.0.10](https://github.com/thechristophe/web-oidc-client/compare/v0.0.9...v0.0.10) (2024-02-15)
 
 
