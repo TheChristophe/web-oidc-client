@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.12](https://github.com/thechristophe/web-oidc-client/compare/v0.0.11...v0.0.12) (2024-03-12)
+
+
+### Bug Fixes
+
+* **RenewLoginState:** return previous login status while refreshing ([634948a](https://github.com/thechristophe/web-oidc-client/commit/634948a9f17b7251176e58dd63275456a7cf7106))
+
 ## [0.0.11](https://github.com/thechristophe/web-oidc-client/compare/v0.0.10...v0.0.11) (2024-03-10)
 
 
