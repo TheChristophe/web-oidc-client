@@ -15,6 +15,9 @@ import { logError, logDebug } from './console';
 export type AuthEventHandler = (event: Status) => void;
 type Pending = 'login' | 'logout';
 
+// 5 minutes
+const REFRESH_WINDOW = 1000 * 60 * 5;
+
 class AuthClient {
   private readonly initConfiguration: InitialConfiguration;
   private state: AuthInternalState | null = null;
@@ -182,10 +185,8 @@ class AuthClient {
 
     if (endpoints !== undefined) {
       this.tokenRenewal = setTimeout(
-        () => {
-          this.advanceState(new RenewLoginState(state, state.authCache, endpoints));
-        },
-        state.authCache.expiresAt - Date.now() - /* 5 minutes */ 1000 * 60 * 5,
+        () => this.advanceState(new RenewLoginState(state, state.authCache, endpoints, true)),
+        state.authCache.expiresAt - Date.now() - REFRESH_WINDOW,
       );
     }
   }

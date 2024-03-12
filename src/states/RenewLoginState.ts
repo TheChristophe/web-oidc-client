@@ -7,10 +7,17 @@ import LoggedInState from './LoggedInState';
 import { type Endpoints } from '../Configuration';
 import StartOauthState from './StartOauthState';
 import isJsonResponse from '../isJsonResponse';
+import type Status from '../Status';
+import { LOADING, AuthStatus } from '../Status';
 class RenewLoginState extends AuthInternalState {
   override state: AuthState<'authCache' | 'endpoints'>;
 
-  constructor(state: AuthState, authCache: AuthCache, endpoints: Endpoints) {
+  constructor(
+    state: AuthState,
+    authCache: AuthCache,
+    endpoints: Endpoints,
+    private refresh: boolean = false,
+  ) {
     super(state);
     this.state = {
       ...state,
@@ -124,6 +131,22 @@ class RenewLoginState extends AuthInternalState {
       user,
       expiresAt,
     };
+  }
+
+  // return cached status to not move application back to loading state
+  public override getStatus(): Status {
+    if (this.refresh) {
+      // return cached status as it's not likely to have expired yet (5-min window)
+      return {
+        status: AuthStatus.LoggedIn,
+        user: this.state.authCache.user,
+        auth: {
+          token: this.state.authCache.tokenResponse.access_token,
+        },
+      };
+    }
+
+    return LOADING;
   }
 }
 
