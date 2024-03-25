@@ -1,6 +1,6 @@
 {
   "name": "@thechristophe/web-oidc-client",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Basic oidc client for browser apps",
   "scripts": {
     "build": "rollup -c",
