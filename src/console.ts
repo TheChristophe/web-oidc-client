@@ -16,3 +16,7 @@ export const logWarn = (...args: Parameters<typeof console.warn>) => {
 export const logError = (...args: Parameters<typeof console.error>) => {
   console.error(PREFIX, STYLE, ...args);
 };
+
+export const logObject = (...args: Parameters<typeof console.dir>) => {
+  console.dir(...args);
+};

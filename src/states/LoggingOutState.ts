@@ -8,7 +8,7 @@ class LoggingOutState extends AuthInternalState {
       await this.revokeToken();
     } catch (error) {
       // log the error but ultimately ignore it
-      logWarn('Failed to revoke token', error);
+      logWarn('Failed to revoke token', error instanceof Error ? error.message : 'Unknown error');
     }
 
     this.advance(NotLoggedInState);

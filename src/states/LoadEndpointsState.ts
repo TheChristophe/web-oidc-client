@@ -84,7 +84,11 @@ class LoadEndpointsState extends AuthInternalState {
       this.validateOidcWellknown(json);
       return json;
     } catch (e: unknown) {
-      logWarn('Stored endpoints look invalid, resetting', e);
+      logWarn(
+        'Stored endpoints look invalid, resetting',
+        e instanceof Error ? e.message : 'Unknown error',
+        stored,
+      );
       localStorage.removeItem(this.endpointsKey);
       return null;
     }
