@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.15](https://github.com/thechristophe/web-oidc-client/compare/v0.0.14...v0.0.15) (2024-03-27)
+
+
+### Bug Fixes
+
+* replace session with localStorage due to odd issues ([2fea775](https://github.com/thechristophe/web-oidc-client/commit/2fea775dfddf3ef884a711f50c37449c37791a60))
+
 ## [0.0.14](https://github.com/thechristophe/web-oidc-client/compare/v0.0.13...v0.0.14) (2024-03-27)
 
 
