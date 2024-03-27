@@ -56,7 +56,11 @@ class IncomingRedirectState extends AuthInternalState {
     try {
       tokenResponse = await this.requestToken(code, challenge);
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching token', error);
+      this.advance(
+        ErrorState,
+        'Error while fetching token',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return;
     }
 
@@ -109,7 +113,11 @@ class IncomingRedirectState extends AuthInternalState {
       // TODO: validate fields from userResponse
       user = await userResponse.json();
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while parsing user info', error);
+      this.advance(
+        ErrorState,
+        'Error while parsing user info',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return;
     }
     const cache = this.packTokenAndUser(token, user);

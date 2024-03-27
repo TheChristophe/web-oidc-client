@@ -133,7 +133,7 @@ class AuthClient {
     this.initConfiguration.debug && logDebug('Moving to state', newState.constructor.name);
 
     if (newState instanceof ErrorState) {
-      logError('Error state:', newState.errorMessage);
+      logError('Error state:', ...newState.getFullError());
     }
 
     this.state = newState;
