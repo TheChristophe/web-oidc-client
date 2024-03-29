@@ -95,8 +95,6 @@ class RenewLoginState extends AuthInternalState {
     const cache = this.packTokenAndUser(token, user);
     localStorage.setItem(this.state.storageKey, JSON.stringify(cache));
 
-    dispatchEvent(new Event('newAuth'));
-
     this.advance(LoggedInState, cache);
   }
 
