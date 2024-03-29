@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.16](https://github.com/thechristophe/web-oidc-client/compare/v0.0.15...v0.0.16) (2024-03-29)
+
+
+### Bug Fixes
+
+* only process redirects if we're expecting one ([730f39b](https://github.com/thechristophe/web-oidc-client/commit/730f39b7f898e332d02df940009a821932e7feb3))
+
 ## [0.0.15](https://github.com/thechristophe/web-oidc-client/compare/v0.0.14...v0.0.15) (2024-03-27)
 
 
