@@ -16,12 +16,24 @@ class RedirectCheckState extends AuthInternalState {
 
   override async process() {
     const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code !== null) {
+
+    if (
+      this.hasPendingRedirect() &&
+      // TODO: incomplete params, handle specifically?
+      params.get('code') != null &&
+      params.get('state') != null
+    ) {
       this.advance(IncomingRedirectState, this.state.endpoints, params);
     } else {
       this.advance(CheckLoginState, this.state.endpoints);
     }
+  }
+
+  protected hasPendingRedirect() {
+    return (
+      localStorage.getItem(this.oauthStateKey) !== null &&
+      localStorage.getItem(this.oauthChallengeKey) !== null
+    );
   }
 }
 

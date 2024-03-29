@@ -58,6 +58,14 @@ class AuthInternalState {
     this.state.advanceState(new otherStateClass(this.state, ...params));
   }
 
+  protected get oauthStateKey() {
+    return `${this.state.storageKey}.state`;
+  }
+
+  protected get oauthChallengeKey() {
+    return `${this.state.storageKey}.code_verifier`;
+  }
+
   /**
    * Process the current state
    *

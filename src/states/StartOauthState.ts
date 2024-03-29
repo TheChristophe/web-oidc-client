@@ -41,7 +41,7 @@ class StartOauthState extends AuthInternalState {
   override async process(): Promise<void> {
     const state = this.newValidState();
     const challenge = generatePkce();
-    localStorage.setItem(`${this.state.storageKey}.code_verifier`, challenge);
+    localStorage.setItem(this.oauthChallengeKey, challenge);
 
     const codeChallenge = await generateCodeChallenge(challenge);
     window.location.href = `${this.state.endpoints.authorization_endpoint}?${new URLSearchParams({
@@ -60,7 +60,7 @@ class StartOauthState extends AuthInternalState {
    */
   private newValidState(): string {
     const state = Math.random().toString(36).substring(2, 15);
-    localStorage.setItem(`${this.state.storageKey}.state`, state);
+    localStorage.setItem(this.oauthStateKey, state);
     return state;
   }
 }

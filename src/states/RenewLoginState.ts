@@ -38,7 +38,7 @@ class RenewLoginState extends AuthInternalState {
     try {
       tokenResponse = await this.requestToken(this.state.authCache.tokenResponse.refresh_token);
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching token', error);
+      this.advance(ErrorState, 'Error while renewing token', error);
       return;
     }
 

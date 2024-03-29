@@ -36,7 +36,7 @@ class IncomingRedirectState extends AuthInternalState {
       this.advance(ErrorState, 'Invalid state in oauth redirect');
       return;
     }
-    const challenge = localStorage.getItem(`${this.state.storageKey}.code_verifier`);
+    const challenge = localStorage.getItem(this.oauthChallengeKey);
     if (challenge == null) {
       this.advance(ErrorState, 'Missing challenge code');
       return;
@@ -89,7 +89,7 @@ class IncomingRedirectState extends AuthInternalState {
       return;
     }
 
-    localStorage.removeItem(`${this.state.storageKey}.code_verifier`);
+    localStorage.removeItem(this.oauthChallengeKey);
 
     let user: Claims;
     let userResponse: Response;
@@ -164,13 +164,13 @@ class IncomingRedirectState extends AuthInternalState {
    * @param state authentication state to remove
    */
   private popValidState(state: string): boolean {
-    const storedState = localStorage.getItem(`${this.state.storageKey}.state`);
+    const storedState = localStorage.getItem(this.oauthStateKey);
     if (state !== storedState) {
       this.state.configuration.debug &&
         logDebug('Received state', state, 'did not match stored state', storedState);
       return false;
     }
-    localStorage.removeItem(`${this.state.storageKey}.state`);
+    localStorage.removeItem(this.oauthStateKey);
     return true;
   }
 }
