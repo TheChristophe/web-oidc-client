@@ -140,7 +140,13 @@ class AuthClient {
     this.endpoints = newState.getState().endpoints ?? this.endpoints;
 
     const newStatus = newState.getStatus();
-    if (this.status.status !== newStatus.status) {
+    if (
+      this.status.status !== newStatus.status ||
+      // update if token has changed, e.g. when refreshing
+      (newStatus.status === 'logged-in' &&
+        newStatus.status === this.status.status &&
+        newStatus.auth.token !== this.status.auth.token)
+    ) {
       this.initConfiguration.debug && logDebug('Status changed', newStatus.status);
       this.eventHandler(newStatus);
     }
