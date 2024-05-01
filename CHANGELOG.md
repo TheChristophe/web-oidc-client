@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.17](https://github.com/thechristophe/web-oidc-client/compare/v0.0.16...v0.0.17) (2024-05-01)
+
+
+### Bug Fixes
+
+* **AuthClient:** publish new status event if token has changed ([42a5eb2](https://github.com/thechristophe/web-oidc-client/commit/42a5eb21291a0f41924eaec01a3edc94d7eb48fb))
+
 ## [0.0.16](https://github.com/thechristophe/web-oidc-client/compare/v0.0.15...v0.0.16) (2024-03-29)
 
 
