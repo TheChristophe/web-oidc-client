@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.18](https://github.com/thechristophe/web-oidc-client/compare/v0.0.17...v0.0.18) (2024-05-17)
+
+
+### Features
+
+* **AuthClient:** renew function ([e62c39c](https://github.com/thechristophe/web-oidc-client/commit/e62c39c6a2c791ed2400364a5354c8c7226401fa))
+
 ## [0.0.17](https://github.com/thechristophe/web-oidc-client/compare/v0.0.16...v0.0.17) (2024-05-01)
 
 
