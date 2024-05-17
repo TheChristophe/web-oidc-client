@@ -13,7 +13,7 @@ import ErrorState from './states/ErrorState';
 import { logError, logDebug } from './console';
 
 export type AuthEventHandler = (event: Status) => void;
-type Pending = 'login' | 'logout';
+type Pending = 'login' | 'logout' | 'renew';
 
 // 5 minutes
 const REFRESH_WINDOW = 1000 * 60 * 5;
@@ -89,6 +89,32 @@ class AuthClient {
       this.advanceState(new LoggingOutState(this.state?.getState() ?? this.getInitialState()));
     } else {
       this.pendingAction = 'logout';
+    }
+  }
+
+  /**
+   * Renew credentials and user info
+   */
+  public renew() {
+    if (
+      this.pendingAction === 'logout' ||
+      this.pendingAction === 'renew' ||
+      // TODO: no instanceof
+      !(this.state instanceof LoggedInState) ||
+      this.endpoints == null
+    ) {
+      return;
+    }
+
+    this.initConfiguration.debug && logDebug('renew');
+
+    const state: LoggedInState = this.state;
+    if (this.status.status !== 'loading') {
+      this.advanceState(
+        new RenewLoginState(state.getState(), state.state.authCache, this.endpoints, true),
+      );
+    } else {
+      this.pendingAction = 'renew';
     }
   }
 
@@ -169,6 +195,12 @@ class AuthClient {
       this.initConfiguration.debug && logDebug('Executing pending logout');
       this.pendingAction = undefined;
       return this.logout();
+    }
+    // pending renew
+    if (this.pendingAction === 'renew') {
+      this.initConfiguration.debug && logDebug('Executing pending renew');
+      this.pendingAction = undefined;
+      return this.renew();
     }
 
     // schedule renewal if logged in
