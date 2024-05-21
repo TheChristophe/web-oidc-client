@@ -44,7 +44,7 @@ class CheckLoginState extends AuthInternalState {
       return json;
     } catch (e: unknown) {
       logWarn(
-        'Stored endpoints look invalid, resetting',
+        'Stored login look invalid, resetting',
         e instanceof Error ? e.message : 'Unknown error',
         stored,
       );
