@@ -26,6 +26,10 @@ export type TokenResponse = {
    * token as described by Section 3.3.
    */
   scope?: string;
+  /**
+   * TODO: where is this officially documented?
+   */
+  id_token?: string;
 };
 export type WorkingTokenResponse = TokenResponse & {
   expires_in: number;

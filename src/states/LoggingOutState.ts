@@ -6,6 +6,11 @@ class LoggingOutState extends AuthInternalState {
   override async process() {
     try {
       await this.revokeToken();
+
+      localStorage.removeItem(this.state.storageKey);
+
+      // may redirect to another page
+      await this.endSession();
     } catch (error) {
       // log the error but ultimately ignore it
       logWarn('Failed to revoke token', error instanceof Error ? error.message : 'Unknown error');
@@ -35,6 +40,25 @@ class LoggingOutState extends AuthInternalState {
       }),
     });
     // we don't really care about the response, we're dropping it from our storage regardless
+  }
+
+  private async endSession() {
+    if (
+      this.state.endpoints == null ||
+      this.state.authCache == null ||
+      this.state.endpoints.end_session_endpoint == null ||
+      this.state.authCache.tokenResponse.refresh_token == null ||
+      this.state.authCache.tokenResponse.id_token == null
+    ) {
+      return;
+    }
+
+    window.location.href = `${this.state.endpoints.end_session_endpoint}?${new URLSearchParams({
+      client_id: this.state.configuration.clientId,
+      id_token_hint: this.state.authCache.tokenResponse.id_token,
+      post_logout_redirect_uri:
+        this.state.configuration.postLogoutRedirectionUrl ?? window.location.origin,
+    }).toString()}`;
   }
 }
 

@@ -139,6 +139,8 @@ class AuthClient {
       autoLogin: this.#initConfiguration.autoLogin === true,
       redirectionUrl:
         this.#initConfiguration.redirectionUrl ?? `${window.location.origin}/oauth-redirect`,
+      postLogoutRedirectionUrl:
+        this.#initConfiguration.postLogoutRedirectionUrl ?? window.location.origin,
       debug: this.#initConfiguration.debug ?? false,
     };
   }

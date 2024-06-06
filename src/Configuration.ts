@@ -3,6 +3,7 @@ export type Endpoints = {
   token_endpoint: string;
   userinfo_endpoint: string;
   revocation_endpoint: string;
+  end_session_endpoint?: string;
 };
 
 export type ConfigEndpoints =
@@ -18,6 +19,7 @@ export type ConfigEndpoints =
 type BaseConfig = {
   clientId: string;
   redirectionUrl?: string;
+  postLogoutRedirectionUrl?: string;
   scopes: string;
   autoLogin?: boolean;
 
