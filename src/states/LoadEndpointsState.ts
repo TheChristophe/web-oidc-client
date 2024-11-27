@@ -23,17 +23,16 @@ class LoadEndpointsState extends AuthInternalState {
     if (endpoints == null) {
       try {
         const newEndpoints = await this.fetchEndpoints();
-        this.advance(RedirectCheckState, newEndpoints);
+        return new RedirectCheckState(this.state, newEndpoints);
       } catch (e: unknown) {
         // TODO: don't use exception for control flow
         if (e instanceof FetchError) {
-          this.advance(ErrorState, e.message, e.extra);
-        } else {
-          this.advance(ErrorState, 'Unknown error while fetching OIDC endpoints', e);
+          return new ErrorState(this.state, e.message, e.extra);
         }
+        return new ErrorState(this.state, 'Unknown error while fetching OIDC endpoints', e);
       }
     } else {
-      this.advance(RedirectCheckState, endpoints);
+      return new RedirectCheckState(this.state, endpoints);
     }
   }
 

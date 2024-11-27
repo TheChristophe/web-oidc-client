@@ -23,13 +23,11 @@ class CheckLoginState extends AuthInternalState {
     const cached = this.tryGetStoredLogin();
     if (cached != null) {
       if (this.hasExpired(cached)) {
-        this.advance(RenewLoginState, cached, this.state.endpoints);
-      } else {
-        this.advance(LoggedInState, cached);
+        return new RenewLoginState(this.state, cached, this.state.endpoints);
       }
-    } else {
-      this.advance(NotLoggedInState);
+      return new LoggedInState(this.state, cached);
     }
+    return new NotLoggedInState(this.state);
   }
 
   private tryGetStoredLogin(): AuthCache | null {

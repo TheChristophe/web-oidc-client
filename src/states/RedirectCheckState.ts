@@ -23,10 +23,9 @@ class RedirectCheckState extends AuthInternalState {
       params.get('code') != null &&
       params.get('state') != null
     ) {
-      this.advance(IncomingRedirectState, this.state.endpoints, params);
-    } else {
-      this.advance(CheckLoginState, this.state.endpoints);
+      return new IncomingRedirectState(this.state, this.state.endpoints, params);
     }
+    return new CheckLoginState(this.state, this.state.endpoints);
   }
 
   protected hasPendingRedirect() {

@@ -5,6 +5,7 @@ import { AuthStatus } from '../Status';
 class NotLoggedInState extends AuthInternalState {
   override async process() {
     localStorage.removeItem(this.state.storageKey);
+    return undefined;
   }
 
   public override getStatus(): Status {

@@ -6,6 +6,7 @@ export const logDebug = (...args: Parameters<typeof console.debug>) => {
 };
 
 export const logInfo = (...args: Parameters<typeof console.info>) => {
+  // eslint-disable-next-line no-console
   console.info(PREFIX, STYLE, ...args);
 };
 
@@ -18,5 +19,6 @@ export const logError = (...args: Parameters<typeof console.error>) => {
 };
 
 export const logObject = (...args: Parameters<typeof console.dir>) => {
+  // eslint-disable-next-line no-console
   console.dir(...args);
 };

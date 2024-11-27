@@ -10,8 +10,8 @@ type AuthCache<Claims extends { sub: string } = StandardClaims> = {
   /**
    * OIDC userinfo claims
    */
-
   user: Claims;
+
   /**
    * Unix timestamp of when the token expires, in milliseconds
    */

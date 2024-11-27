@@ -13,25 +13,26 @@ import ErrorState from './states/ErrorState';
 import { logError, logDebug } from './console';
 
 export type AuthEventHandler = (event: Status) => void;
-type Pending = 'login' | 'logout' | 'renew';
 
 // 5 minutes
 const REFRESH_WINDOW = 1000 * 60 * 5;
 
 class AuthClient {
-  private readonly initConfiguration: InitialConfiguration;
-  private state: AuthInternalState | null = null;
-  private readonly eventHandler: AuthEventHandler;
-  private status: Status;
+  readonly #initConfiguration: InitialConfiguration;
+  #state: AuthInternalState | null = null;
+  readonly #eventHandler: AuthEventHandler;
+  #status: Status;
 
-  private pendingAction?: Pending;
-  private endpoints?: Endpoints;
-  private tokenRenewal: ReturnType<typeof setTimeout> | null = null;
+  #endpoints?: Endpoints;
+  #tokenRenewal: ReturnType<typeof setTimeout> | null = null;
+
+  #cycling: boolean = false;
+  #pendingState: (() => AuthInternalState | undefined) | null = null;
 
   constructor(initialConfiguration: InitialConfiguration, eventHandler: AuthEventHandler) {
-    this.initConfiguration = initialConfiguration;
-    this.eventHandler = eventHandler;
-    this.status = LOADING;
+    this.#initConfiguration = initialConfiguration;
+    this.#eventHandler = eventHandler;
+    this.#status = LOADING;
   }
 
   /**
@@ -40,9 +41,9 @@ class AuthClient {
    * This is required to not break in SSR (e.g. Next.js)
    */
   public browserInit() {
-    this.initConfiguration.debug && logDebug('Browser Init');
+    this.#initConfiguration.debug && logDebug('Browser Init');
 
-    if (this.state != null) {
+    if (this.#state != null) {
       return;
     }
     this.advanceState(new LoadEndpointsState(this.getInitialState()));
@@ -56,65 +57,74 @@ class AuthClient {
     });
   }
 
+  #newLogin = () =>
+    this.#endpoints
+      ? new StartOauthState(this.#state?.getState() ?? this.getInitialState(), this.#endpoints)
+      : undefined;
   /**
-   * Log in the user anew, regardless of previous state
+   * Log in the user anew
    */
   public login() {
-    if (this.pendingAction === 'login' || this.endpoints === undefined) {
+    if (this.#pendingState === this.#newLogin) {
       return;
     }
 
-    this.initConfiguration.debug && logDebug('Login');
+    this.#initConfiguration.debug && logDebug('Queueing login');
 
-    if (this.status.status !== 'loading') {
-      this.advanceState(
-        new StartOauthState(this.state?.getState() ?? this.getInitialState(), this.endpoints),
-      );
+    if (this.#cycling) {
+      this.#pendingState = this.#newLogin;
     } else {
-      this.pendingAction = 'login';
+      const state = this.#newLogin();
+      if (state) {
+        this.advanceState(state);
+      }
     }
   }
 
+  #newLogout = () => new LoggingOutState(this.#state?.getState() ?? this.getInitialState());
   /**
-   * Log out the user, regardless of previous state
+   * Log out the user
    */
   public logout() {
-    if (this.pendingAction === 'logout') {
+    if (this.#pendingState === this.#newLogout) {
       return;
     }
 
-    this.initConfiguration.debug && logDebug('Logout');
+    this.#initConfiguration.debug && logDebug('Queueing logout');
 
-    if (this.status.status !== 'loading') {
-      this.advanceState(new LoggingOutState(this.state?.getState() ?? this.getInitialState()));
+    if (this.#cycling) {
+      this.#pendingState = this.#newLogout;
     } else {
-      this.pendingAction = 'logout';
+      this.advanceState(this.#newLogout());
     }
   }
 
+  #newRenew = () =>
+    this.#endpoints && this.#state instanceof LoggedInState
+      ? new RenewLoginState(
+          this.#state.getState(),
+          this.#state.state.authCache,
+          this.#endpoints,
+          true,
+        )
+      : undefined;
   /**
    * Renew credentials and user info
    */
   public renew() {
-    if (
-      this.pendingAction === 'logout' ||
-      this.pendingAction === 'renew' ||
-      // TODO: no instanceof
-      !(this.state instanceof LoggedInState) ||
-      this.endpoints == null
-    ) {
+    if (this.#pendingState === this.#newLogout || this.#pendingState === this.#newLogout) {
       return;
     }
 
-    this.initConfiguration.debug && logDebug('renew');
+    this.#initConfiguration.debug && logDebug('renew');
 
-    const state: LoggedInState = this.state;
-    if (this.status.status !== 'loading') {
-      this.advanceState(
-        new RenewLoginState(state.getState(), state.state.authCache, this.endpoints, true),
-      );
+    if (this.#cycling) {
+      this.#pendingState = this.#newRenew;
     } else {
-      this.pendingAction = 'renew';
+      const state = this.#newRenew();
+      if (state) {
+        this.advanceState(state);
+      }
     }
   }
 
@@ -125,20 +135,19 @@ class AuthClient {
    */
   private getBrowserConfiguration(): Configuration {
     return {
-      ...this.initConfiguration,
-      autoLogin: this.initConfiguration.autoLogin === true,
+      ...this.#initConfiguration,
+      autoLogin: this.#initConfiguration.autoLogin === true,
       redirectionUrl:
-        this.initConfiguration.redirectionUrl ?? `${window.location.origin}/oauth-redirect`,
-      debug: this.initConfiguration.debug ?? false,
+        this.#initConfiguration.redirectionUrl ?? `${window.location.origin}/oauth-redirect`,
+      debug: this.#initConfiguration.debug ?? false,
     };
   }
 
   private getInitialState(): AuthState {
     return {
       configuration: this.getBrowserConfiguration(),
-      advanceState: this.advanceState.bind(this),
 
-      storageKey: this.initConfiguration.clientId,
+      storageKey: this.#initConfiguration.clientId,
     };
   }
 
@@ -146,72 +155,63 @@ class AuthClient {
    * Get the current auth status
    */
   public getState() {
-    return this.status;
+    return this.#status;
   }
 
   /**
    * Move to a new state
    *
-   * @param newState new state
+   * @param newState_ new state
    * @private
    */
-  private advanceState(newState: AuthInternalState) {
-    this.initConfiguration.debug && logDebug('Moving to state', newState.constructor.name);
+  private async advanceState(newState_: AuthInternalState) {
+    this.#cycling = true;
+    let newState: AuthInternalState | undefined = newState_;
+    while (newState !== undefined) {
+      this.#initConfiguration.debug && logDebug('Moving to state', newState.constructor.name);
 
-    if (newState instanceof ErrorState) {
-      logError('Error state:', ...newState.getFullError());
-    }
+      if (newState instanceof ErrorState) {
+        logError('Error state:', ...newState.getFullError());
+      }
 
-    this.state = newState;
-    this.endpoints = newState.getState().endpoints ?? this.endpoints;
+      this.#state = newState;
+      this.#endpoints = newState.getState().endpoints ?? this.#endpoints;
 
-    const newStatus = newState.getStatus();
-    if (
-      this.status.status !== newStatus.status ||
-      // update if token has changed, e.g. when refreshing
-      (newStatus.status === 'logged-in' &&
-        newStatus.status === this.status.status &&
-        newStatus.auth.token !== this.status.auth.token)
-    ) {
-      this.initConfiguration.debug && logDebug('Status changed', newStatus.status);
-      this.eventHandler(newStatus);
-    }
+      const newStatus = newState.getStatus();
+      if (
+        this.#status.status !== newStatus.status ||
+        // update if token has changed, e.g. when refreshing
+        (newStatus.status === 'logged-in' &&
+          newStatus.status === this.#status.status &&
+          newStatus.auth.token !== this.#status.auth.token)
+      ) {
+        this.#initConfiguration.debug && logDebug('Status changed', newStatus.status);
+        this.#eventHandler(newStatus);
+      }
 
-    this.status = this.state.getStatus();
+      this.#status = this.#state.getStatus();
 
-    // cancel pending renewal
-    if (this.tokenRenewal != null) {
-      clearTimeout(this.tokenRenewal);
-      this.tokenRenewal = null;
-    }
-    // pending login
-    if (this.pendingAction === 'login') {
-      this.initConfiguration.debug && logDebug('Executing pending login');
-      this.pendingAction = undefined;
-      return this.login();
-    }
-    // pending logout
-    if (this.pendingAction === 'logout') {
-      this.initConfiguration.debug && logDebug('Executing pending logout');
-      this.pendingAction = undefined;
-      return this.logout();
-    }
-    // pending renew
-    if (this.pendingAction === 'renew') {
-      this.initConfiguration.debug && logDebug('Executing pending renew');
-      this.pendingAction = undefined;
-      return this.renew();
-    }
+      // cancel pending renewal
+      if (this.#tokenRenewal != null) {
+        clearTimeout(this.#tokenRenewal);
+        this.#tokenRenewal = null;
+      }
 
-    // schedule renewal if logged in
-    // TODO: do this cleaner or elsewhere
-    if (/*this.status.status === 'logged-in'*/ this.state instanceof LoggedInState) {
-      this.initConfiguration.debug && logDebug('Queueing renewal');
-      this.scheduleTokenRenewal(this.state);
-    }
+      // schedule renewal if logged in
+      // TODO: do this cleaner or elsewhere
+      if (this.#state instanceof LoggedInState) {
+        this.#initConfiguration.debug && logDebug('Queueing renewal');
+        this.scheduleTokenRenewal(this.#state);
+      }
 
-    this.initConfiguration.debug && logDebug('Processing state', newState.constructor.name);
-    newState.process();
+      this.#initConfiguration.debug && logDebug('Processing state', newState.constructor.name);
+      newState = await newState.process();
+      if (newState === undefined && this.#pendingState !== null) {
+        newState = this.#pendingState();
+        this.#pendingState = null;
+      }
+    }
+    this.#cycling = false;
   }
 
   private scheduleTokenRenewal(loggedIn: LoggedInState) {
@@ -219,10 +219,10 @@ class AuthClient {
     //       user interaction
     //       then again, if you don't have refresh tokens enabled, what were you expecting anyway
     const state = loggedIn.state;
-    const endpoints = this.endpoints;
+    const endpoints = this.#endpoints;
 
     if (endpoints !== undefined) {
-      this.tokenRenewal = setTimeout(
+      this.#tokenRenewal = setTimeout(
         () => this.advanceState(new RenewLoginState(state, state.authCache, endpoints, true)),
         state.authCache.expiresAt - Date.now() - REFRESH_WINDOW,
       );

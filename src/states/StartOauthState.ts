@@ -38,7 +38,7 @@ class StartOauthState extends AuthInternalState {
     };
   }
 
-  override async process(): Promise<void> {
+  override async process() {
     const state = this.newValidState();
     const challenge = generatePkce();
     localStorage.setItem(this.oauthChallengeKey, challenge);
@@ -53,6 +53,9 @@ class StartOauthState extends AuthInternalState {
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
     }).toString()}`;
+
+    // no state, leaving page
+    return undefined;
   }
 
   /**

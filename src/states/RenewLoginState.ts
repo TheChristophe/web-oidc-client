@@ -29,8 +29,7 @@ class RenewLoginState extends AuthInternalState {
   override async process() {
     // no refresh token to refresh, force login
     if (this.state.authCache.tokenResponse.refresh_token === undefined) {
-      this.advance(StartOauthState, this.state.endpoints);
-      return;
+      return new StartOauthState(this.state, this.state.endpoints);
     }
 
     let token: WorkingTokenResponse;
@@ -38,17 +37,14 @@ class RenewLoginState extends AuthInternalState {
     try {
       tokenResponse = await this.requestToken(this.state.authCache.tokenResponse.refresh_token);
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while renewing token', error);
-      return;
+      return new ErrorState(this.state, 'Error while renewing token', error);
     }
 
     if (!tokenResponse.ok) {
       if (isJsonResponse(tokenResponse)) {
-        this.advance(ErrorState, 'Token response was not ok', await tokenResponse.json());
-      } else {
-        this.advance(ErrorState, 'Token response was not ok', tokenResponse.status);
+        return new ErrorState(this.state, 'Token response was not ok', await tokenResponse.json());
       }
-      return;
+      return new ErrorState(this.state, 'Token response was not ok', tokenResponse.status);
     }
 
     try {
@@ -56,15 +52,16 @@ class RenewLoginState extends AuthInternalState {
       const maybeToken: TokenResponse = await tokenResponse.json();
 
       if (maybeToken.expires_in === undefined) {
-        this.advance(ErrorState, 'This OAuth2.0 implementation requires expires_in to be set');
-        return;
+        return new ErrorState(
+          this.state,
+          'This OAuth2.0 implementation requires expires_in to be set',
+        );
       }
 
       // TODO: how to make typescript happy with this because the condition above should already cover this
       token = maybeToken as WorkingTokenResponse;
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Failed to validate token response', error);
-      return;
+      return new ErrorState(this.state, 'Failed to validate token response', error);
     }
 
     let user: Claims;
@@ -72,30 +69,30 @@ class RenewLoginState extends AuthInternalState {
     try {
       userResponse = await this.requestUserinfo(token);
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching userinfo', error);
-      return;
+      return new ErrorState(this.state, 'Error while fetching userinfo', error);
     }
 
     if (!userResponse.ok) {
       if (isJsonResponse(userResponse)) {
-        this.advance(ErrorState, 'Userinfo response was not ok', await userResponse.json());
-      } else {
-        this.advance(ErrorState, 'Userinfo response was not ok', userResponse.status);
+        return new ErrorState(
+          this.state,
+          'Userinfo response was not ok',
+          await userResponse.json(),
+        );
       }
-      return;
+      return new ErrorState(this.state, 'Userinfo response was not ok', userResponse.status);
     }
 
     try {
       // TODO: validate fields from userResponse
       user = await userResponse.json();
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while parsing userinfo response', error);
-      return;
+      return new ErrorState(this.state, 'Error while parsing userinfo response', error);
     }
     const cache = this.packTokenAndUser(token, user);
     localStorage.setItem(this.state.storageKey, JSON.stringify(cache));
 
-    this.advance(LoggedInState, cache);
+    return new LoggedInState(this.state, cache);
   }
 
   private async requestToken(refresh_token: string): Promise<Response> {

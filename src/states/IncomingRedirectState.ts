@@ -22,24 +22,17 @@ class IncomingRedirectState extends AuthInternalState {
   }
 
   override async process() {
-    this.processOauthRedirect();
-  }
-
-  private async processOauthRedirect() {
     const code = this.params.get('code');
     const state = this.params.get('state');
     if (code == null || state == null) {
-      this.advance(ErrorState, 'Missing code or state in oauth redirect');
-      return;
+      return new ErrorState(this.state, 'Missing code or state in oauth redirect');
     }
     if (!this.popValidState(state)) {
-      this.advance(ErrorState, 'Invalid state in oauth redirect');
-      return;
+      return new ErrorState(this.state, 'Invalid state in oauth redirect');
     }
     const challenge = localStorage.getItem(this.oauthChallengeKey);
     if (challenge == null) {
-      this.advance(ErrorState, 'Missing challenge code');
-      return;
+      return new ErrorState(this.state, 'Missing challenge code');
     }
 
     // TODO nextjs router ?
@@ -56,21 +49,18 @@ class IncomingRedirectState extends AuthInternalState {
     try {
       tokenResponse = await this.requestToken(code, challenge);
     } catch (error: unknown) {
-      this.advance(
-        ErrorState,
+      return new ErrorState(
+        this.state,
         'Error while fetching token',
         error instanceof Error ? error.message : 'Unknown error',
       );
-      return;
     }
 
     if (!tokenResponse.ok) {
       if (isJsonResponse(tokenResponse)) {
-        this.advance(ErrorState, 'Bad token response', await tokenResponse.json());
-      } else {
-        this.advance(ErrorState, 'Bad token response', tokenResponse.status);
+        return new ErrorState(this.state, 'Bad token response', await tokenResponse.json());
       }
-      return;
+      return new ErrorState(this.state, 'Bad token response', tokenResponse.status);
     }
 
     try {
@@ -78,15 +68,13 @@ class IncomingRedirectState extends AuthInternalState {
       const maybeToken: TokenResponse = await tokenResponse.json();
 
       if (maybeToken.expires_in === undefined) {
-        this.advance(ErrorState, 'This OIDC implementation requires expires_in to be set');
-        return;
+        return new ErrorState(this.state, 'This OIDC implementation requires expires_in to be set');
       }
 
       // TODO: how to make typescript happy with this because the condition above should already cover this
       token = maybeToken as WorkingTokenResponse;
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while parsing token response', error);
-      return;
+      return new ErrorState(this.state, 'Error while parsing token response', error);
     }
 
     localStorage.removeItem(this.oauthChallengeKey);
@@ -96,34 +84,30 @@ class IncomingRedirectState extends AuthInternalState {
     try {
       userResponse = await this.requestUserinfo(token);
     } catch (error: unknown) {
-      this.advance(ErrorState, 'Error while fetching user info', error);
-      return;
+      return new ErrorState(this.state, 'Error while fetching user info', error);
     }
 
     if (!userResponse.ok) {
       if (isJsonResponse(userResponse)) {
-        this.advance(ErrorState, 'Bad userinfo response', await userResponse.json());
-      } else {
-        this.advance(ErrorState, 'Bad userinfo response', userResponse.status);
+        return new ErrorState(this.state, 'Bad userinfo response', await userResponse.json());
       }
-      return;
+      return new ErrorState(this.state, 'Bad userinfo response', userResponse.status);
     }
 
     try {
       // TODO: validate fields from userResponse
       user = await userResponse.json();
     } catch (error: unknown) {
-      this.advance(
-        ErrorState,
+      return new ErrorState(
+        this.state,
         'Error while parsing user info',
         error instanceof Error ? error.message : 'Unknown error',
       );
-      return;
     }
     const cache = this.packTokenAndUser(token, user);
     localStorage.setItem(this.state.storageKey, JSON.stringify(cache));
 
-    this.advance(LoggedInState, cache);
+    return new LoggedInState(this.state, cache);
   }
 
   private async requestToken(code: string, challenge: string): Promise<Response> {

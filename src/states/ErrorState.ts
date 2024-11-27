@@ -16,6 +16,7 @@ class ErrorState extends AuthInternalState {
 
   override async process() {
     localStorage.removeItem(this.state.storageKey);
+    return undefined;
   }
 
   public override getStatus(): Status {
