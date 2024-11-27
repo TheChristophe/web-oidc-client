@@ -44,6 +44,9 @@ class StartOauthState extends AuthInternalState {
     localStorage.setItem(this.oauthChallengeKey, challenge);
 
     const codeChallenge = await generateCodeChallenge(challenge);
+    // TODO: make type for this
+    //       https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1
+    //       https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
     window.location.href = `${this.state.endpoints.authorization_endpoint}?${new URLSearchParams({
       client_id: this.state.configuration.clientId,
       redirect_uri: this.state.configuration.redirectionUrl,
