@@ -6,7 +6,7 @@
     "build": "rollup -c",
     "release": "commit-and-tag-version",
     "clean": "rimraf dist/",
-    "prepublishOnly": "yarn clean && yarn build",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
     "lint": "eslint src",
     "lint:export": "eslint --output-file eslint_report.json --format json src",
     "lint:formatting": "prettier --check .",
