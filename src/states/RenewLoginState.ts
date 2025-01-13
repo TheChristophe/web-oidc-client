@@ -42,7 +42,20 @@ class RenewLoginState extends AuthInternalState {
 
     if (!tokenResponse.ok) {
       if (isJsonResponse(tokenResponse)) {
-        return new ErrorState(this.state, 'Token response was not ok', await tokenResponse.json());
+        const jason: unknown = await tokenResponse.json();
+        if (
+          tokenResponse.status === 400 &&
+          typeof jason === 'object' &&
+          jason !== null &&
+          'error' in jason &&
+          jason['error'] === 'invalid_grant'
+        ) {
+          // refresh token expired or invalidated
+          // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+          return new StartOauthState(this.state, this.state.endpoints);
+        }
+        // i am considering all other errors to be configuration errors or client bugs
+        return new ErrorState(this.state, 'Token response was not ok', jason);
       }
       return new ErrorState(this.state, 'Token response was not ok', tokenResponse.status);
     }
