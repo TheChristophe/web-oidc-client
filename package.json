@@ -17,7 +17,7 @@
     "url": "git+ssh://git@github.com/thechristophe/web-oidc-client.git"
   },
   "author": "Christophe",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "bugs": {
     "url": "https://github.com/thechristophe/web-oidc-client/issues"
   },
