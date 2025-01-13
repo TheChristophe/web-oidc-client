@@ -1,0 +1,59 @@
+name: Lint & Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eslint:
+    permissions:
+      checks: write
+      actions: read
+      contents: read
+      packages: read
+      statuses: read
+    uses: ./.github/workflows/eslint.yml
+
+  prettier:
+    uses: ./.github/workflows/prettier.yml
+
+  type-check:
+    uses: ./.github/workflows/type-check.yml
+
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    needs: [eslint, prettier, type-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Cache dependencies
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish
+        run: pnpm publish --no-git-checks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

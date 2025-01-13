@@ -1,0 +1,29 @@
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eslint:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    permissions:
+      checks: write
+      actions: read
+      contents: read
+      packages: read
+      statuses: read
+    uses: ./.github/workflows/eslint.yml
+
+  prettier:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/prettier.yml
+
+  type-check:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/type-check.yml
