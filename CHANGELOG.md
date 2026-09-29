@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.21](https://github.com/thechristophe/web-oidc-client/compare/v0.0.20...v0.0.21) (2026-09-29)
+
+
+### Bug Fixes
+
+* if refresh token is expired, don't auto sign in, just sign out ([ee0d0a9](https://github.com/thechristophe/web-oidc-client/commit/ee0d0a906dcb16d7796a732166528e3dee3358ad))
+
 ## [0.0.18](https://github.com/thechristophe/web-oidc-client/compare/v0.0.17...v0.0.18) (2024-05-17)
 
 ### Features
