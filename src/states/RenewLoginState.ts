@@ -52,7 +52,7 @@ class RenewLoginState extends AuthInternalState {
         ) {
           // refresh token expired or invalidated
           // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-          return new StartOauthState(this.state, this.state.endpoints);
+          return new ErrorState(this.state, 'Refresh token expired', jason);
         }
         // i am considering all other errors to be configuration errors or client bugs
         return new ErrorState(this.state, 'Token response was not ok', jason);
