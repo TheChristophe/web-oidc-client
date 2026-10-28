@@ -1,10 +1,11 @@
 import AuthInternalState from './AuthInternalState';
 import type Status from '../Status';
 import { AuthStatus } from '../Status';
+import { clearStoredLogin } from '../storedLogin';
 
 class NotLoggedInState extends AuthInternalState {
   override async process() {
-    localStorage.removeItem(this.state.storageKey);
+    clearStoredLogin(this.state.storageKey, this.state.authCache);
     return undefined;
   }
 

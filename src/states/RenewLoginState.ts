@@ -9,6 +9,10 @@ import StartOauthState from './StartOauthState';
 import isJsonResponse from '../isJsonResponse';
 import type Status from '../Status';
 import { LOADING, AuthStatus } from '../Status';
+import NotLoggedInState from './NotLoggedInState';
+import { readStoredLogin, withRefreshLock } from '../storedLogin';
+import { logWarn } from '../console';
+import REFRESH_WINDOW from '../refreshWindow';
 class RenewLoginState extends AuthInternalState {
   override state: AuthState<'authCache' | 'endpoints'>;
 
@@ -32,10 +36,32 @@ class RenewLoginState extends AuthInternalState {
       return new StartOauthState(this.state, this.state.endpoints);
     }
 
+    return withRefreshLock(this.state.storageKey, () => this.refreshLocked());
+  }
+
+  private async refreshLocked(): Promise<AuthInternalState> {
+    // another tab may have refreshed or logged out while this one waited for the lock
+    const stored = readStoredLogin(this.state.storageKey);
+    if (stored === null) {
+      return new NotLoggedInState(this.state);
+    }
+    const ownRefreshToken = this.state.authCache.tokenResponse.refresh_token;
+    if (stored.tokenResponse.refresh_token !== ownRefreshToken) {
+      this.state = { ...this.state, authCache: stored };
+      if (stored.expiresAt - Date.now() > REFRESH_WINDOW) {
+        return new LoggedInState(this.state, stored);
+      }
+    }
+
+    const refreshToken = this.state.authCache.tokenResponse.refresh_token;
+    if (refreshToken === undefined) {
+      return new StartOauthState(this.state, this.state.endpoints);
+    }
+
     let token: WorkingTokenResponse;
     let tokenResponse: Response;
     try {
-      tokenResponse = await this.requestToken(this.state.authCache.tokenResponse.refresh_token);
+      tokenResponse = await this.requestToken(refreshToken);
     } catch (error: unknown) {
       return new ErrorState(this.state, 'Error while renewing token', error);
     }
@@ -50,9 +76,10 @@ class RenewLoginState extends AuthInternalState {
           'error' in jason &&
           jason['error'] === 'invalid_grant'
         ) {
-          // refresh token expired or invalidated
+          // refresh token expired or invalidated, the user has to log in again
           // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-          return new ErrorState(this.state, 'Refresh token expired', jason);
+          logWarn('Refresh token rejected, logging out', jason);
+          return new NotLoggedInState(this.state);
         }
         // i am considering all other errors to be configuration errors or client bugs
         return new ErrorState(this.state, 'Token response was not ok', jason);

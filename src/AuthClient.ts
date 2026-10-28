@@ -11,11 +11,9 @@ import LoggedInState from './states/LoggedInState';
 import LoggingOutState from './states/LoggingOutState';
 import ErrorState from './states/ErrorState';
 import { logError, logDebug } from './console';
+import REFRESH_WINDOW from './refreshWindow';
 
 export type AuthEventHandler = (event: Status) => void;
-
-// 5 minutes
-const REFRESH_WINDOW = 1000 * 60 * 5;
 
 class AuthClient {
   readonly #initConfiguration: InitialConfiguration;
@@ -50,11 +48,31 @@ class AuthClient {
 
     window.addEventListener('storage', (event) => {
       if (event.key === this.getInitialState().storageKey) {
-        // other tab updated auth, reload
-        // TODO: risk: both tabs attempting to renew, with the slower tab causing it to end up in error state
-        this.advanceState(new LoadEndpointsState(this.getInitialState()));
+        // other tab updated auth, reload once the current state is done processing
+        this.#enqueue(this.#reload);
       }
     });
+  }
+
+  #reload = () => new LoadEndpointsState(this.getInitialState());
+
+  /**
+   * Move to a new state now, or after the current one is done processing
+   *
+   * A queued login or logout is never replaced, as it was requested by the user.
+   */
+  #enqueue(newState: () => AuthInternalState | undefined) {
+    if (!this.#cycling) {
+      const state = newState();
+      if (state) {
+        this.advanceState(state);
+      }
+      return;
+    }
+
+    if (this.#pendingState !== this.#newLogin && this.#pendingState !== this.#newLogout) {
+      this.#pendingState = newState;
+    }
   }
 
   #newLogin = () =>
@@ -112,20 +130,8 @@ class AuthClient {
    * Renew credentials and user info
    */
   public renew() {
-    if (this.#pendingState === this.#newLogout || this.#pendingState === this.#newLogout) {
-      return;
-    }
-
     this.#initConfiguration.debug && logDebug('renew');
-
-    if (this.#cycling) {
-      this.#pendingState = this.#newRenew;
-    } else {
-      const state = this.#newRenew();
-      if (state) {
-        this.advanceState(state);
-      }
-    }
+    this.#enqueue(this.#newRenew);
   }
 
   /**
@@ -225,7 +231,7 @@ class AuthClient {
 
     if (endpoints !== undefined) {
       this.#tokenRenewal = setTimeout(
-        () => this.advanceState(new RenewLoginState(state, state.authCache, endpoints, true)),
+        () => this.#enqueue(() => new RenewLoginState(state, state.authCache, endpoints, true)),
         state.authCache.expiresAt - Date.now() - REFRESH_WINDOW,
       );
     }

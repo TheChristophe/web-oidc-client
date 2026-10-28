@@ -1,6 +1,7 @@
 import AuthInternalState, { type AuthState } from './AuthInternalState';
 import type Status from '../Status';
 import { AuthStatus } from '../Status';
+import { clearStoredLogin } from '../storedLogin';
 
 class ErrorState extends AuthInternalState {
   private readonly _errorMessage: string;
@@ -15,7 +16,7 @@ class ErrorState extends AuthInternalState {
   }
 
   override async process() {
-    localStorage.removeItem(this.state.storageKey);
+    clearStoredLogin(this.state.storageKey, this.state.authCache);
     return undefined;
   }
 
