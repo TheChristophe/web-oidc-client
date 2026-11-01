@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.0.22](https://github.com/thechristophe/web-oidc-client/compare/v0.0.21...v0.0.22) (2026-11-01)
+
+
+### Bug Fixes
+
+* add more validation ([b6ff363](https://github.com/thechristophe/web-oidc-client/commit/b6ff3635c123ff851283eac86f095279e9732e0a))
+* make renewal more resilient to expiry and race conditions ([3d453c2](https://github.com/thechristophe/web-oidc-client/commit/3d453c25b976839439cc86a3b650119e341b64fb))
+
 ## [0.0.21](https://github.com/thechristophe/web-oidc-client/compare/v0.0.20...v0.0.21) (2026-09-29)
 
 
