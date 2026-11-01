@@ -13,11 +13,7 @@ const hasPendingRedirect = (context: AuthContext) =>
 const processRedirectCheck = async ({ context }: StateOf<'redirect-check'>): Transition => {
   const params = new URLSearchParams(window.location.search);
 
-  if (
-    hasPendingRedirect(context) &&
-    params.get('code') != null &&
-    params.get('state') != null
-  ) {
+  if (hasPendingRedirect(context) && params.get('code') != null && params.get('state') != null) {
     return { type: 'incoming-redirect', context, params };
   }
   return { type: 'check-login', context };
