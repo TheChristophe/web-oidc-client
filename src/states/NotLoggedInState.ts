@@ -1,19 +1,9 @@
-import AuthInternalState from './AuthInternalState';
-import type Status from '../Status';
-import { AuthStatus } from '../Status';
+import { type StateOf, type Transition } from './AuthMachineState';
 import { clearStoredLogin } from '../storedLogin';
 
-class NotLoggedInState extends AuthInternalState {
-  override async process() {
-    clearStoredLogin(this.state.storageKey, this.state.authCache);
-    return undefined;
-  }
+const processNotLoggedIn = async ({ context }: StateOf<'not-logged-in'>): Transition => {
+  clearStoredLogin(context.storageKey, context.authCache);
+  return undefined;
+};
 
-  public override getStatus(): Status {
-    return {
-      status: AuthStatus.NotLoggedIn,
-    };
-  }
-}
-
-export default NotLoggedInState;
+export default processNotLoggedIn;

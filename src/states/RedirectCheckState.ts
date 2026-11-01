@@ -1,39 +1,26 @@
-import AuthInternalState, { type AuthState } from './AuthInternalState';
-import { type Endpoints } from '../Configuration';
-import IncomingRedirectState from './IncomingRedirectState';
-import CheckLoginState from './CheckLoginState';
+import {
+  type AuthContext,
+  type StateOf,
+  type Transition,
+  oauthChallengeKey,
+  oauthStateKey,
+} from './AuthMachineState';
 
-class RedirectCheckState extends AuthInternalState {
-  override state: AuthState<'endpoints'>;
+const hasPendingRedirect = (context: AuthContext) =>
+  localStorage.getItem(oauthStateKey(context)) !== null &&
+  localStorage.getItem(oauthChallengeKey(context)) !== null;
 
-  constructor(state: AuthState, endpoints: Endpoints) {
-    super(state);
-    this.state = {
-      ...state,
-      endpoints,
-    };
+const processRedirectCheck = async ({ context }: StateOf<'redirect-check'>): Transition => {
+  const params = new URLSearchParams(window.location.search);
+
+  if (
+    hasPendingRedirect(context) &&
+    params.get('code') != null &&
+    params.get('state') != null
+  ) {
+    return { type: 'incoming-redirect', context, params };
   }
+  return { type: 'check-login', context };
+};
 
-  override async process() {
-    const params = new URLSearchParams(window.location.search);
-
-    if (
-      this.hasPendingRedirect() &&
-      // TODO: incomplete params, handle specifically?
-      params.get('code') != null &&
-      params.get('state') != null
-    ) {
-      return new IncomingRedirectState(this.state, this.state.endpoints, params);
-    }
-    return new CheckLoginState(this.state, this.state.endpoints);
-  }
-
-  protected hasPendingRedirect() {
-    return (
-      localStorage.getItem(this.oauthStateKey) !== null &&
-      localStorage.getItem(this.oauthChallengeKey) !== null
-    );
-  }
-}
-
-export default RedirectCheckState;
+export default processRedirectCheck;

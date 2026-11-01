@@ -1,15 +1,15 @@
-import type AuthInternalState from './states/AuthInternalState';
-import { type AuthState } from './states/AuthInternalState';
-import LoadEndpointsState from './states/LoadEndpointsState';
+import {
+  type AuthContext,
+  type AuthMachineState,
+  type StateOf,
+  getFullError,
+  getStatus,
+} from './states/AuthMachineState';
+import processState from './states/processState';
 import type Configuration from './Configuration';
 import { type Endpoints, type InitialConfiguration } from './Configuration';
 import type Status from './Status';
 import { LOADING } from './Status';
-import StartOauthState from './states/StartOauthState';
-import RenewLoginState from './states/RenewLoginState';
-import LoggedInState from './states/LoggedInState';
-import LoggingOutState from './states/LoggingOutState';
-import ErrorState from './states/ErrorState';
 import { logError, logDebug } from './console';
 import REFRESH_WINDOW from './refreshWindow';
 
@@ -17,7 +17,7 @@ export type AuthEventHandler = (event: Status) => void;
 
 class AuthClient {
   readonly #initConfiguration: InitialConfiguration;
-  #state: AuthInternalState | null = null;
+  #state: AuthMachineState | null = null;
   readonly #eventHandler: AuthEventHandler;
   #status: Status;
 
@@ -25,7 +25,7 @@ class AuthClient {
   #tokenRenewal: ReturnType<typeof setTimeout> | null = null;
 
   #cycling: boolean = false;
-  #pendingState: (() => AuthInternalState | undefined) | null = null;
+  #pendingState: (() => AuthMachineState | undefined) | null = null;
 
   constructor(initialConfiguration: InitialConfiguration, eventHandler: AuthEventHandler) {
     this.#initConfiguration = initialConfiguration;
@@ -44,7 +44,7 @@ class AuthClient {
     if (this.#state != null) {
       return;
     }
-    this.advanceState(new LoadEndpointsState(this.getInitialState()));
+    this.advanceState({ type: 'load-endpoints', context: this.getInitialState() });
 
     window.addEventListener('storage', (event) => {
       if (event.key === this.getInitialState().storageKey) {
@@ -54,14 +54,14 @@ class AuthClient {
     });
   }
 
-  #reload = () => new LoadEndpointsState(this.getInitialState());
+  #reload = (): AuthMachineState => ({ type: 'load-endpoints', context: this.getInitialState() });
 
   /**
    * Move to a new state now, or after the current one is done processing
    *
    * A queued login or logout is never replaced, as it was requested by the user.
    */
-  #enqueue(newState: () => AuthInternalState | undefined) {
+  #enqueue(newState: () => AuthMachineState | undefined) {
     if (!this.#cycling) {
       const state = newState();
       if (state) {
@@ -75,9 +75,12 @@ class AuthClient {
     }
   }
 
-  #newLogin = () =>
+  #newLogin = (): AuthMachineState | undefined =>
     this.#endpoints
-      ? new StartOauthState(this.#state?.getState() ?? this.getInitialState(), this.#endpoints)
+      ? {
+          type: 'start-oauth',
+          context: { ...this.#currentContext(), endpoints: this.#endpoints },
+        }
       : undefined;
   /**
    * Log in the user anew
@@ -99,7 +102,7 @@ class AuthClient {
     }
   }
 
-  #newLogout = () => new LoggingOutState(this.#state?.getState() ?? this.getInitialState());
+  #newLogout = (): AuthMachineState => ({ type: 'logging-out', context: this.#currentContext() });
   /**
    * Log out the user
    */
@@ -117,14 +120,13 @@ class AuthClient {
     }
   }
 
-  #newRenew = () =>
-    this.#endpoints && this.#state instanceof LoggedInState
-      ? new RenewLoginState(
-          this.#state.getState(),
-          this.#state.state.authCache,
-          this.#endpoints,
-          true,
-        )
+  #newRenew = (): AuthMachineState | undefined =>
+    this.#endpoints && this.#state?.type === 'logged-in'
+      ? {
+          type: 'renew-login',
+          context: { ...this.#state.context, endpoints: this.#endpoints },
+          refresh: true,
+        }
       : undefined;
   /**
    * Renew credentials and user info
@@ -151,7 +153,11 @@ class AuthClient {
     };
   }
 
-  private getInitialState(): AuthState {
+  #currentContext(): AuthContext {
+    return this.#state?.context ?? this.getInitialState();
+  }
+
+  private getInitialState(): AuthContext {
     return {
       configuration: this.getBrowserConfiguration(),
 
@@ -172,20 +178,20 @@ class AuthClient {
    * @param newState_ new state
    * @private
    */
-  private async advanceState(newState_: AuthInternalState) {
+  private async advanceState(newState_: AuthMachineState) {
     this.#cycling = true;
-    let newState: AuthInternalState | undefined = newState_;
+    let newState: AuthMachineState | undefined = newState_;
     while (newState !== undefined) {
-      this.#initConfiguration.debug && logDebug('Moving to state', newState.constructor.name);
+      this.#initConfiguration.debug && logDebug('Moving to state', newState.type);
 
-      if (newState instanceof ErrorState) {
-        logError('Error state:', ...newState.getFullError());
+      if (newState.type === 'error') {
+        logError('Error state:', ...getFullError(newState));
       }
 
       this.#state = newState;
-      this.#endpoints = newState.getState().endpoints ?? this.#endpoints;
+      this.#endpoints = newState.context.endpoints ?? this.#endpoints;
 
-      const newStatus = newState.getStatus();
+      const newStatus = getStatus(newState);
       if (
         this.#status.status !== newStatus.status ||
         // update if token has changed, e.g. when refreshing
@@ -197,7 +203,7 @@ class AuthClient {
         this.#eventHandler(newStatus);
       }
 
-      this.#status = this.#state.getStatus();
+      this.#status = newStatus;
 
       // cancel pending renewal
       if (this.#tokenRenewal != null) {
@@ -207,13 +213,13 @@ class AuthClient {
 
       // schedule renewal if logged in
       // TODO: do this cleaner or elsewhere
-      if (this.#state instanceof LoggedInState) {
+      if (newState.type === 'logged-in') {
         this.#initConfiguration.debug && logDebug('Queueing renewal');
-        this.scheduleTokenRenewal(this.#state);
+        this.scheduleTokenRenewal(newState);
       }
 
-      this.#initConfiguration.debug && logDebug('Processing state', newState.constructor.name);
-      newState = await newState.process();
+      this.#initConfiguration.debug && logDebug('Processing state', newState.type);
+      newState = await processState(newState);
       if (newState === undefined && this.#pendingState !== null) {
         newState = this.#pendingState();
         this.#pendingState = null;
@@ -222,17 +228,22 @@ class AuthClient {
     this.#cycling = false;
   }
 
-  private scheduleTokenRenewal(loggedIn: LoggedInState) {
+  private scheduleTokenRenewal(loggedIn: StateOf<'logged-in'>) {
     // TODO: do we want to schedule a renewal if there's no refresh token? this would involve a login flow, breaking
     //       user interaction
     //       then again, if you don't have refresh tokens enabled, what were you expecting anyway
-    const state = loggedIn.state;
+    const { context } = loggedIn;
     const endpoints = this.#endpoints;
 
     if (endpoints !== undefined) {
       this.#tokenRenewal = setTimeout(
-        () => this.#enqueue(() => new RenewLoginState(state, state.authCache, endpoints, true)),
-        state.authCache.expiresAt - Date.now() - REFRESH_WINDOW,
+        () =>
+          this.#enqueue(() => ({
+            type: 'renew-login',
+            context: { ...context, endpoints },
+            refresh: true,
+          })),
+        context.authCache.expiresAt - Date.now() - REFRESH_WINDOW,
       );
     }
   }

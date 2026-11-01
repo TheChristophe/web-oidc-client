@@ -1,38 +1,9 @@
-import AuthInternalState, { type AuthState } from './AuthInternalState';
-import type Status from '../Status';
-import { AuthStatus } from '../Status';
+import { type StateOf, type Transition } from './AuthMachineState';
 import { clearStoredLogin } from '../storedLogin';
 
-class ErrorState extends AuthInternalState {
-  private readonly _errorMessage: string;
-  private readonly _extra?: unknown;
+const processError = async ({ context }: StateOf<'error'>): Transition => {
+  clearStoredLogin(context.storageKey, context.authCache);
+  return undefined;
+};
 
-  constructor(state: AuthState, error: string, e?: unknown) {
-    super(state);
-    this._errorMessage = error;
-    if (e != null) {
-      this._extra = e instanceof Error ? e.message : e;
-    }
-  }
-
-  override async process() {
-    clearStoredLogin(this.state.storageKey, this.state.authCache);
-    return undefined;
-  }
-
-  public override getStatus(): Status {
-    return {
-      status: AuthStatus.Error,
-      error: this._errorMessage,
-    };
-  }
-
-  getFullError(): [string, unknown?] {
-    if (this._extra) {
-      return [this._errorMessage, this._extra];
-    }
-    return [this._errorMessage];
-  }
-}
-
-export default ErrorState;
+export default processError;

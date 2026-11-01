@@ -1,188 +1,138 @@
+import { type AuthContext, type StateOf, type Transition, errorState } from './AuthMachineState';
 import type AuthCache from '../AuthCache';
-import AuthInternalState, { type AuthState } from './AuthInternalState';
 import { type TokenResponse, type WorkingTokenResponse } from '../oauthTypes';
-import ErrorState from './ErrorState';
 import type Claims from '../Claims';
-import LoggedInState from './LoggedInState';
-import { type Endpoints } from '../Configuration';
-import StartOauthState from './StartOauthState';
 import isJsonResponse from '../isJsonResponse';
-import type Status from '../Status';
-import { LOADING, AuthStatus } from '../Status';
-import NotLoggedInState from './NotLoggedInState';
 import { readStoredLogin, withRefreshLock } from '../storedLogin';
 import { logWarn } from '../console';
 import REFRESH_WINDOW from '../refreshWindow';
-class RenewLoginState extends AuthInternalState {
-  override state: AuthState<'authCache' | 'endpoints'>;
 
-  constructor(
-    state: AuthState,
-    authCache: AuthCache,
-    endpoints: Endpoints,
-    private refresh: boolean = false,
-  ) {
-    super(state);
-    this.state = {
-      ...state,
-      authCache,
-      endpoints,
-    };
+type Context = AuthContext<'authCache' | 'endpoints'>;
+
+const requestToken = async (context: Context, refresh_token: string): Promise<Response> =>
+  fetch(context.endpoints.token_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refresh_token,
+      redirect_uri: context.configuration.redirectionUrl,
+      client_id: context.configuration.clientId,
+      // optional
+      //scope: context.configuration.scopes,
+    }),
+  });
+
+const requestUserinfo = async (context: Context, token: WorkingTokenResponse): Promise<Response> =>
+  fetch(context.endpoints.userinfo_endpoint, {
+    headers: { Authorization: `${token.token_type} ${token.access_token}` },
+  });
+
+const packTokenAndUser = (token: WorkingTokenResponse, user: Claims): AuthCache => ({
+  tokenResponse: token,
+  user,
+  expiresAt: Date.now() + token.expires_in * 1000,
+});
+
+const refreshLocked = async (ownContext: Context): Transition => {
+  let context = ownContext;
+
+  // another tab may have refreshed or logged out while this one waited for the lock
+  const stored = readStoredLogin(context.storageKey);
+  if (stored === null) {
+    return { type: 'not-logged-in', context };
+  }
+  if (stored.tokenResponse.refresh_token !== context.authCache.tokenResponse.refresh_token) {
+    context = { ...context, authCache: stored };
+    if (stored.expiresAt - Date.now() > REFRESH_WINDOW) {
+      return { type: 'logged-in', context };
+    }
   }
 
-  override async process() {
-    // no refresh token to refresh, force login
-    if (this.state.authCache.tokenResponse.refresh_token === undefined) {
-      return new StartOauthState(this.state, this.state.endpoints);
-    }
-
-    return withRefreshLock(this.state.storageKey, () => this.refreshLocked());
+  const refreshToken = context.authCache.tokenResponse.refresh_token;
+  if (refreshToken === undefined) {
+    return { type: 'start-oauth', context };
   }
 
-  private async refreshLocked(): Promise<AuthInternalState> {
-    // another tab may have refreshed or logged out while this one waited for the lock
-    const stored = readStoredLogin(this.state.storageKey);
-    if (stored === null) {
-      return new NotLoggedInState(this.state);
-    }
-    const ownRefreshToken = this.state.authCache.tokenResponse.refresh_token;
-    if (stored.tokenResponse.refresh_token !== ownRefreshToken) {
-      this.state = { ...this.state, authCache: stored };
-      if (stored.expiresAt - Date.now() > REFRESH_WINDOW) {
-        return new LoggedInState(this.state, stored);
+  let token: WorkingTokenResponse;
+  let tokenResponse: Response;
+  try {
+    tokenResponse = await requestToken(context, refreshToken);
+  } catch (error: unknown) {
+    return errorState(context, 'Error while renewing token', error);
+  }
+
+  if (!tokenResponse.ok) {
+    if (isJsonResponse(tokenResponse)) {
+      const jason: unknown = await tokenResponse.json();
+      if (
+        tokenResponse.status === 400 &&
+        typeof jason === 'object' &&
+        jason !== null &&
+        'error' in jason &&
+        jason['error'] === 'invalid_grant'
+      ) {
+        // refresh token expired or invalidated, the user has to log in again
+        // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+        logWarn('Refresh token rejected, logging out', jason);
+        return { type: 'not-logged-in', context };
       }
+      // i am considering all other errors to be configuration errors or client bugs
+      return errorState(context, 'Token response was not ok', jason);
     }
-
-    const refreshToken = this.state.authCache.tokenResponse.refresh_token;
-    if (refreshToken === undefined) {
-      return new StartOauthState(this.state, this.state.endpoints);
-    }
-
-    let token: WorkingTokenResponse;
-    let tokenResponse: Response;
-    try {
-      tokenResponse = await this.requestToken(refreshToken);
-    } catch (error: unknown) {
-      return new ErrorState(this.state, 'Error while renewing token', error);
-    }
-
-    if (!tokenResponse.ok) {
-      if (isJsonResponse(tokenResponse)) {
-        const jason: unknown = await tokenResponse.json();
-        if (
-          tokenResponse.status === 400 &&
-          typeof jason === 'object' &&
-          jason !== null &&
-          'error' in jason &&
-          jason['error'] === 'invalid_grant'
-        ) {
-          // refresh token expired or invalidated, the user has to log in again
-          // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-          logWarn('Refresh token rejected, logging out', jason);
-          return new NotLoggedInState(this.state);
-        }
-        // i am considering all other errors to be configuration errors or client bugs
-        return new ErrorState(this.state, 'Token response was not ok', jason);
-      }
-      return new ErrorState(this.state, 'Token response was not ok', tokenResponse.status);
-    }
-
-    try {
-      // TODO: validate fields from tokenResponse
-      const maybeToken: TokenResponse = await tokenResponse.json();
-
-      if (maybeToken.expires_in === undefined) {
-        return new ErrorState(
-          this.state,
-          'This OAuth2.0 implementation requires expires_in to be set',
-        );
-      }
-
-      // TODO: how to make typescript happy with this because the condition above should already cover this
-      token = maybeToken as WorkingTokenResponse;
-    } catch (error: unknown) {
-      return new ErrorState(this.state, 'Failed to validate token response', error);
-    }
-
-    let user: Claims;
-    let userResponse: Response;
-    try {
-      userResponse = await this.requestUserinfo(token);
-    } catch (error: unknown) {
-      return new ErrorState(this.state, 'Error while fetching userinfo', error);
-    }
-
-    if (!userResponse.ok) {
-      if (isJsonResponse(userResponse)) {
-        return new ErrorState(
-          this.state,
-          'Userinfo response was not ok',
-          await userResponse.json(),
-        );
-      }
-      return new ErrorState(this.state, 'Userinfo response was not ok', userResponse.status);
-    }
-
-    try {
-      // TODO: validate fields from userResponse
-      user = await userResponse.json();
-    } catch (error: unknown) {
-      return new ErrorState(this.state, 'Error while parsing userinfo response', error);
-    }
-    const cache = this.packTokenAndUser(token, user);
-    localStorage.setItem(this.state.storageKey, JSON.stringify(cache));
-
-    return new LoggedInState(this.state, cache);
+    return errorState(context, 'Token response was not ok', tokenResponse.status);
   }
 
-  private async requestToken(refresh_token: string): Promise<Response> {
-    return fetch(this.state.endpoints.token_endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refresh_token,
-        redirect_uri: this.state.configuration.redirectionUrl,
-        client_id: this.state.configuration.clientId,
-        // optional
-        //scope: this.state.configuration.scopes,
-      }),
-    });
-  }
+  try {
+    // TODO: validate fields from tokenResponse
+    const maybeToken: TokenResponse = await tokenResponse.json();
 
-  private async requestUserinfo(token: WorkingTokenResponse): Promise<Response> {
-    return fetch(this.state.endpoints.userinfo_endpoint, {
-      headers: { Authorization: `${token.token_type} ${token.access_token}` },
-    });
-  }
-
-  private packTokenAndUser(token: WorkingTokenResponse, user: Claims): AuthCache {
-    const expiresAt = Date.now() + token.expires_in * 1000;
-
-    return {
-      tokenResponse: token,
-      user,
-      expiresAt,
-    };
-  }
-
-  // return cached status to not move application back to loading state
-  public override getStatus(): Status {
-    if (this.refresh) {
-      // return cached status as it's not likely to have expired yet (5-min window)
-      return {
-        status: AuthStatus.LoggedIn,
-        user: this.state.authCache.user,
-        auth: {
-          token: this.state.authCache.tokenResponse.access_token,
-        },
-      };
+    if (maybeToken.expires_in === undefined) {
+      return errorState(context, 'This OAuth2.0 implementation requires expires_in to be set');
     }
 
-    return LOADING;
+    // TODO: how to make typescript happy with this because the condition above should already cover this
+    token = maybeToken as WorkingTokenResponse;
+  } catch (error: unknown) {
+    return errorState(context, 'Failed to validate token response', error);
   }
-}
 
-export default RenewLoginState;
+  let user: Claims;
+  let userResponse: Response;
+  try {
+    userResponse = await requestUserinfo(context, token);
+  } catch (error: unknown) {
+    return errorState(context, 'Error while fetching userinfo', error);
+  }
+
+  if (!userResponse.ok) {
+    if (isJsonResponse(userResponse)) {
+      return errorState(context, 'Userinfo response was not ok', await userResponse.json());
+    }
+    return errorState(context, 'Userinfo response was not ok', userResponse.status);
+  }
+
+  try {
+    // TODO: validate fields from userResponse
+    user = await userResponse.json();
+  } catch (error: unknown) {
+    return errorState(context, 'Error while parsing userinfo response', error);
+  }
+  const authCache = packTokenAndUser(token, user);
+  localStorage.setItem(context.storageKey, JSON.stringify(authCache));
+
+  return { type: 'logged-in', context: { ...context, authCache } };
+};
+
+const processRenewLogin = async ({ context }: StateOf<'renew-login'>): Transition => {
+  // no refresh token to refresh, force login
+  if (context.authCache.tokenResponse.refresh_token === undefined) {
+    return { type: 'start-oauth', context };
+  }
+
+  return withRefreshLock(context.storageKey, () => refreshLocked(context));
+};
+
+export default processRenewLogin;

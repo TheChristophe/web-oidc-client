@@ -1,36 +1,22 @@
-import AuthInternalState, { type AuthState } from './AuthInternalState';
-import LoggedInState from './LoggedInState';
-import NotLoggedInState from './NotLoggedInState';
+import { type StateOf, type Transition } from './AuthMachineState';
 import type AuthCache from '../AuthCache';
-import RenewLoginState from './RenewLoginState';
-import { type Endpoints } from '../Configuration';
 import { readStoredLogin } from '../storedLogin';
 
-class CheckLoginState extends AuthInternalState {
-  override state: AuthState<'endpoints'>;
+const hasExpired = (data: AuthCache): boolean => data.expiresAt < Date.now();
 
-  constructor(state: AuthState, endpoints: Endpoints) {
-    super(state);
-    this.state = {
-      ...state,
-      endpoints,
-    };
-  }
-
-  override async process() {
-    const cached = readStoredLogin(this.state.storageKey);
-    if (cached != null) {
-      if (this.hasExpired(cached)) {
-        return new RenewLoginState(this.state, cached, this.state.endpoints);
-      }
-      return new LoggedInState(this.state, cached);
+const processCheckLogin = async ({ context }: StateOf<'check-login'>): Transition => {
+  const cached = readStoredLogin(context.storageKey);
+  if (cached != null) {
+    if (hasExpired(cached)) {
+      return {
+        type: 'renew-login',
+        context: { ...context, authCache: cached },
+        refresh: false,
+      };
     }
-    return new NotLoggedInState(this.state);
+    return { type: 'logged-in', context: { ...context, authCache: cached } };
   }
+  return { type: 'not-logged-in', context };
+};
 
-  private hasExpired(data: AuthCache): boolean {
-    return data.expiresAt < Date.now();
-  }
-}
-
-export default CheckLoginState;
+export default processCheckLogin;
