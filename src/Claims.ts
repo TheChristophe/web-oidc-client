@@ -1,3 +1,13 @@
+import * as v from 'valibot';
+
+/**
+ * Userinfo check: only `sub` is guaranteed, other claims are kept as-is
+ *
+ * Optional claims are not type-checked on purpose, some providers send non-standard values (for
+ * example `email_verified: "true"`), and rejecting those would make login impossible.
+ */
+export const ClaimsSchema = v.looseObject({ sub: v.string() });
+
 /**
  * https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim
  */

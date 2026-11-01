@@ -1,7 +1,19 @@
+import * as v from 'valibot';
 import type AuthCache from './AuthCache';
-import type Claims from './Claims';
+import { ClaimsSchema } from './Claims';
 import { logWarn } from './console';
-import { type TokenResponse } from './oauthTypes';
+import { TokenResponseSchema } from './oauthTypes';
+
+const AuthCacheSchema = v.object({
+  tokenResponse: v.object({
+    ...TokenResponseSchema.entries,
+    expires_in: v.number(),
+    refresh_token: v.string(),
+    scope: v.string(),
+  }),
+  user: ClaimsSchema,
+  expiresAt: v.number(),
+});
 
 /**
  * Read the login stored in localStorage, shared by all tabs of the app
@@ -15,15 +27,15 @@ export const readStoredLogin = (storageKey: string): AuthCache | null => {
   }
 
   try {
-    const json: unknown = JSON.parse(stored);
-    validateCache(json);
-    return json;
+    return v.parse(AuthCacheSchema, JSON.parse(stored));
   } catch (e: unknown) {
-    logWarn(
-      'Stored login look invalid, resetting',
-      e instanceof Error ? e.message : 'Unknown error',
-      stored,
-    );
+    let reason = 'Unknown error';
+    if (v.isValiError(e)) {
+      reason = v.summarize(e.issues);
+    } else if (e instanceof Error) {
+      reason = e.message;
+    }
+    logWarn('Stored login look invalid, resetting', reason, stored);
     localStorage.removeItem(storageKey);
     return null;
   }
@@ -63,54 +75,3 @@ export const withRefreshLock = async <T>(
   }
   return await navigator.locks.request(`${storageKey}.refresh`, callback);
 };
-
-function validateCache(data: unknown): asserts data is AuthCache {
-  if (
-    typeof data !== 'object' ||
-    data == null ||
-    !('tokenResponse' in data) ||
-    !('user' in data) ||
-    !('expiresAt' in data)
-  ) {
-    throw new Error('Incomplete stored login');
-  }
-  const { tokenResponse, user, expiresAt } = data;
-
-  validateTokenResponse(tokenResponse);
-  validateClaims(user);
-  if (typeof expiresAt !== 'number') {
-    throw new Error('Invalid expiresAt');
-  }
-}
-
-function validateTokenResponse(tokenResponse: unknown): asserts tokenResponse is TokenResponse {
-  if (
-    typeof tokenResponse !== 'object' ||
-    tokenResponse == null ||
-    !('access_token' in tokenResponse) ||
-    typeof tokenResponse['access_token'] !== 'string' ||
-    !('token_type' in tokenResponse) ||
-    typeof tokenResponse['token_type'] !== 'string' ||
-    !('expires_in' in tokenResponse) ||
-    typeof tokenResponse['expires_in'] !== 'number' ||
-    !('refresh_token' in tokenResponse) ||
-    typeof tokenResponse['refresh_token'] !== 'string' ||
-    !('scope' in tokenResponse) ||
-    typeof tokenResponse['scope'] !== 'string'
-  ) {
-    throw new Error('Invalid cached tokenResponse');
-  }
-}
-
-function validateClaims(userinfo: unknown): asserts userinfo is Claims {
-  if (
-    typeof userinfo !== 'object' ||
-    userinfo == null ||
-    !('sub' in userinfo) ||
-    typeof userinfo['sub'] !== 'string'
-  ) {
-    throw new Error('Invalid userinfo');
-  }
-
-  // no other fields are guaranteed
-}

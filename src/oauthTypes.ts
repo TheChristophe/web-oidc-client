@@ -1,40 +1,49 @@
+import * as v from 'valibot';
+
 /**
  * https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
  */
-export type TokenResponse = {
+export const TokenResponseSchema = v.object({
   /**
    * The access token issued by the authorization server.
    */
-  access_token: string;
+  access_token: v.string(),
   /**
    * The type of the token issued as described in Section 7.1. Value is case-insensitive.
    */
-  token_type: string;
+  token_type: v.string(),
   /**
    * RECOMMENDED. The lifetime in seconds of the access token. For example, the value "3600" denotes that the access
    * token will expire in one hour from the time the response was generated. If omitted, the authorization server SHOULD
    * provide the expiration time via other means or document the default value.
    */
-  expires_in?: number;
+  expires_in: v.optional(v.number()),
   /**
    * The refresh token, which can be used to obtain new access tokens using the same authorization grant as described
    * in Section 6.
    */
-  refresh_token?: string;
+  refresh_token: v.optional(v.string()),
   /**
    * OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED.  The scope of the access
    * token as described by Section 3.3.
    */
-  scope?: string;
+  scope: v.optional(v.string()),
   /**
    * ID Token value associated with the authenticated session.
    * https://openid.net/specs/openid-connect-core-1_0.html#TokenResponse
    */
-  id_token?: string;
-};
-export type WorkingTokenResponse = TokenResponse & {
-  expires_in: number;
-};
+  id_token: v.optional(v.string()),
+});
+export type TokenResponse = v.InferOutput<typeof TokenResponseSchema>;
+
+/**
+ * A token response with `expires_in`, which this client requires
+ */
+export const WorkingTokenResponseSchema = v.object({
+  ...TokenResponseSchema.entries,
+  expires_in: v.number('This client requires expires_in to be set'),
+});
+export type WorkingTokenResponse = v.InferOutput<typeof WorkingTokenResponseSchema>;
 
 type TokenError =
   /**

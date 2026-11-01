@@ -23,7 +23,7 @@ const rollupOptions = {
   ],
   plugins: [peerDepsExternal(), resolve(), typescript({ tsconfig: './tsconfig.json' }), terser()],
   // can't use /node_modules/ because tslib will break, but the difference is 1kb so we're fine
-  external: ['tslib'],
+  external: ['tslib', 'valibot'],
 };
 
 export default rollupOptions;

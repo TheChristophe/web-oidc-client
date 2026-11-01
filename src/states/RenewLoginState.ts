@@ -1,7 +1,9 @@
 import { type AuthContext, type StateOf, type Transition, errorState } from './AuthMachineState';
 import type AuthCache from '../AuthCache';
-import { type TokenResponse, type WorkingTokenResponse } from '../oauthTypes';
+import * as v from 'valibot';
+import { type WorkingTokenResponse, WorkingTokenResponseSchema } from '../oauthTypes';
 import type Claims from '../Claims';
+import { ClaimsSchema } from '../Claims';
 import isJsonResponse from '../isJsonResponse';
 import { readStoredLogin, withRefreshLock } from '../storedLogin';
 import { logWarn } from '../console';
@@ -86,15 +88,11 @@ const refreshLocked = async (ownContext: Context): Transition => {
   }
 
   try {
-    // TODO: validate fields from tokenResponse
-    const maybeToken: TokenResponse = await tokenResponse.json();
-
-    if (maybeToken.expires_in === undefined) {
-      return errorState(context, 'This OAuth2.0 implementation requires expires_in to be set');
+    const result = v.safeParse(WorkingTokenResponseSchema, await tokenResponse.json());
+    if (!result.success) {
+      return errorState(context, 'Invalid token response', v.summarize(result.issues));
     }
-
-    // TODO: how to make typescript happy with this because the condition above should already cover this
-    token = maybeToken as WorkingTokenResponse;
+    token = result.output;
   } catch (error: unknown) {
     return errorState(context, 'Failed to validate token response', error);
   }
@@ -115,8 +113,11 @@ const refreshLocked = async (ownContext: Context): Transition => {
   }
 
   try {
-    // TODO: validate fields from userResponse
-    user = await userResponse.json();
+    const result = v.safeParse(ClaimsSchema, await userResponse.json());
+    if (!result.success) {
+      return errorState(context, 'Invalid userinfo response', v.summarize(result.issues));
+    }
+    user = result.output;
   } catch (error: unknown) {
     return errorState(context, 'Error while parsing userinfo response', error);
   }

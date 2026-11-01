@@ -6,9 +6,11 @@ import {
   oauthChallengeKey,
   oauthStateKey,
 } from './AuthMachineState';
-import { type TokenResponse, type WorkingTokenResponse } from '../oauthTypes';
+import * as v from 'valibot';
+import { type WorkingTokenResponse, WorkingTokenResponseSchema } from '../oauthTypes';
 import type AuthCache from '../AuthCache';
 import type Claims from '../Claims';
+import { ClaimsSchema } from '../Claims';
 import isJsonResponse from '../isJsonResponse';
 import { logDebug } from '../console';
 
@@ -103,15 +105,11 @@ const processIncomingRedirect = async ({
   }
 
   try {
-    // TODO: validate fields from tokenResponse
-    const maybeToken: TokenResponse = await tokenResponse.json();
-
-    if (maybeToken.expires_in === undefined) {
-      return errorState(context, 'This OIDC implementation requires expires_in to be set');
+    const result = v.safeParse(WorkingTokenResponseSchema, await tokenResponse.json());
+    if (!result.success) {
+      return errorState(context, 'Invalid token response', v.summarize(result.issues));
     }
-
-    // TODO: how to make typescript happy with this because the condition above should already cover this
-    token = maybeToken as WorkingTokenResponse;
+    token = result.output;
   } catch (error: unknown) {
     return errorState(context, 'Error while parsing token response', error);
   }
@@ -134,8 +132,11 @@ const processIncomingRedirect = async ({
   }
 
   try {
-    // TODO: validate fields from userResponse
-    user = await userResponse.json();
+    const result = v.safeParse(ClaimsSchema, await userResponse.json());
+    if (!result.success) {
+      return errorState(context, 'Invalid userinfo response', v.summarize(result.issues));
+    }
+    user = result.output;
   } catch (error: unknown) {
     return errorState(
       context,
