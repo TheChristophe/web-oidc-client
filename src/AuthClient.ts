@@ -44,7 +44,11 @@ class AuthClient {
     if (this.#state != null) {
       return;
     }
-    this.advanceState({ type: 'load-endpoints', context: this.getInitialState() });
+    this.advanceState({
+      type: 'load-endpoints',
+      context: this.getInitialState(),
+      params: new URLSearchParams(window.location.search),
+    });
 
     window.addEventListener('storage', (event) => {
       if (event.key === this.getInitialState().storageKey) {

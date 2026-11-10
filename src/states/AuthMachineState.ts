@@ -24,8 +24,16 @@ export type AuthContext<T extends keyof _Context = never> = Omit<_Context, T> &
  * Each state is a plain object tagged by `type`, carrying only the data it needs.
  */
 export type AuthMachineState =
-  | { readonly type: 'load-endpoints'; readonly context: AuthContext }
-  | { readonly type: 'redirect-check'; readonly context: AuthContext<'endpoints'> }
+  | {
+      readonly type: 'load-endpoints';
+      readonly context: AuthContext;
+      readonly params?: URLSearchParams;
+    }
+  | {
+      readonly type: 'redirect-check';
+      readonly context: AuthContext<'endpoints'>;
+      readonly params?: URLSearchParams;
+    }
   | {
       readonly type: 'incoming-redirect';
       readonly context: AuthContext<'endpoints'>;

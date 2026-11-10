@@ -86,16 +86,16 @@ const tryGetStoredEndpoints = (context: AuthContext): Endpoints | null => {
   }
 };
 
-const processLoadEndpoints = async ({ context }: StateOf<'load-endpoints'>): Transition => {
+const processLoadEndpoints = async ({ context, params }: StateOf<'load-endpoints'>): Transition => {
   const endpoints =
     context.endpoints ?? context.configuration.endpoints ?? tryGetStoredEndpoints(context);
   if (endpoints != null) {
-    return { type: 'redirect-check', context: { ...context, endpoints } };
+    return { type: 'redirect-check', context: { ...context, endpoints }, params };
   }
 
   try {
     const newEndpoints = await fetchEndpoints(context);
-    return { type: 'redirect-check', context: { ...context, endpoints: newEndpoints } };
+    return { type: 'redirect-check', context: { ...context, endpoints: newEndpoints }, params };
   } catch (e: unknown) {
     // TODO: don't use exception for control flow
     if (e instanceof FetchError) {
