@@ -2,20 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## [0.0.22](https://github.com/thechristophe/web-oidc-client/compare/v0.0.21...v0.0.22) (2026-11-01)
+## [0.0.23](https://github.com/thechristophe/web-oidc-client/compare/v0.0.22...v0.0.23) (2026-11-10)
 
 
 ### Bug Fixes
 
-* add more validation ([b6ff363](https://github.com/thechristophe/web-oidc-client/commit/b6ff3635c123ff851283eac86f095279e9732e0a))
-* make renewal more resilient to expiry and race conditions ([3d453c2](https://github.com/thechristophe/web-oidc-client/commit/3d453c25b976839439cc86a3b650119e341b64fb))
+* cache search params when browser init ([a868057](https://github.com/thechristophe/web-oidc-client/commit/a868057924c7412d3c6ee555edecf4486d7299db))
+
+## [0.0.22](https://github.com/thechristophe/web-oidc-client/compare/v0.0.21...v0.0.22) (2026-11-01)
+
+### Bug Fixes
+
+- add more validation ([b6ff363](https://github.com/thechristophe/web-oidc-client/commit/b6ff3635c123ff851283eac86f095279e9732e0a))
+- make renewal more resilient to expiry and race conditions ([3d453c2](https://github.com/thechristophe/web-oidc-client/commit/3d453c25b976839439cc86a3b650119e341b64fb))
 
 ## [0.0.21](https://github.com/thechristophe/web-oidc-client/compare/v0.0.20...v0.0.21) (2026-09-29)
 
-
 ### Bug Fixes
 
-* if refresh token is expired, don't auto sign in, just sign out ([ee0d0a9](https://github.com/thechristophe/web-oidc-client/commit/ee0d0a906dcb16d7796a732166528e3dee3358ad))
+- if refresh token is expired, don't auto sign in, just sign out ([ee0d0a9](https://github.com/thechristophe/web-oidc-client/commit/ee0d0a906dcb16d7796a732166528e3dee3358ad))
 
 ## [0.0.18](https://github.com/thechristophe/web-oidc-client/compare/v0.0.17...v0.0.18) (2024-05-17)
 
